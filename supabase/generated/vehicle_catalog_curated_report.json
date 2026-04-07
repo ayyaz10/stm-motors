@@ -1,0 +1,1129 @@
+[
+  {
+    "make": "Abarth",
+    "sourceMakes": [
+      "ABARTH"
+    ],
+    "modelCount": 9,
+    "fuelCount": 12,
+    "engineSizeCount": 24,
+    "yearCount": 82
+  },
+  {
+    "make": "AC",
+    "sourceMakes": [
+      "AC"
+    ],
+    "modelCount": 1,
+    "fuelCount": 3,
+    "engineSizeCount": 40,
+    "yearCount": 69
+  },
+  {
+    "make": "Aixam",
+    "sourceMakes": [
+      "AIXAM"
+    ],
+    "modelCount": 10,
+    "fuelCount": 18,
+    "engineSizeCount": 18,
+    "yearCount": 74
+  },
+  {
+    "make": "Aixam Mega",
+    "sourceMakes": [
+      "AIXAM"
+    ],
+    "modelCount": 10,
+    "fuelCount": 18,
+    "engineSizeCount": 18,
+    "yearCount": 74
+  },
+  {
+    "make": "Alfa Romeo",
+    "sourceMakes": [
+      "ALFA ROMEO"
+    ],
+    "modelCount": 36,
+    "fuelCount": 75,
+    "engineSizeCount": 281,
+    "yearCount": 566
+  },
+  {
+    "make": "Alpine",
+    "sourceMakes": [
+      "ALPINE"
+    ],
+    "modelCount": 3,
+    "fuelCount": 3,
+    "engineSizeCount": 13,
+    "yearCount": 21
+  },
+  {
+    "make": "Aston Martin",
+    "sourceMakes": [
+      "ASTON MARTIN"
+    ],
+    "modelCount": 29,
+    "fuelCount": 41,
+    "engineSizeCount": 225,
+    "yearCount": 419
+  },
+  {
+    "make": "Audi",
+    "sourceMakes": [
+      "AUDI"
+    ],
+    "modelCount": 59,
+    "fuelCount": 162,
+    "engineSizeCount": 518,
+    "yearCount": 917
+  },
+  {
+    "make": "Austin",
+    "sourceMakes": [
+      "AUSTIN"
+    ],
+    "modelCount": 37,
+    "fuelCount": 69,
+    "engineSizeCount": 534,
+    "yearCount": 581
+  },
+  {
+    "make": "Bentley",
+    "sourceMakes": [
+      "BENTLEY"
+    ],
+    "modelCount": 10,
+    "fuelCount": 30,
+    "engineSizeCount": 127,
+    "yearCount": 259
+  },
+  {
+    "make": "BMW",
+    "sourceMakes": [
+      "BMW"
+    ],
+    "modelCount": 80,
+    "fuelCount": 191,
+    "engineSizeCount": 718,
+    "yearCount": 1210
+  },
+  {
+    "make": "Bristol",
+    "sourceMakes": [
+      "BRISTOL"
+    ],
+    "modelCount": 21,
+    "fuelCount": 26,
+    "engineSizeCount": 62,
+    "yearCount": 114
+  },
+  {
+    "make": "BYD",
+    "sourceMakes": [
+      "BYD"
+    ],
+    "modelCount": 12,
+    "fuelCount": 15,
+    "engineSizeCount": 11,
+    "yearCount": 21
+  },
+  {
+    "make": "Cadillac",
+    "sourceMakes": [
+      "CADILLAC"
+    ],
+    "modelCount": 9,
+    "fuelCount": 21,
+    "engineSizeCount": 120,
+    "yearCount": 171
+  },
+  {
+    "make": "Caterham",
+    "sourceMakes": [
+      "CATERHAM"
+    ],
+    "modelCount": 2,
+    "fuelCount": 5,
+    "engineSizeCount": 34,
+    "yearCount": 64
+  },
+  {
+    "make": "Chery",
+    "sourceMakes": [
+      "CHERY"
+    ],
+    "modelCount": 2,
+    "fuelCount": 3,
+    "engineSizeCount": 0,
+    "yearCount": 0
+  },
+  {
+    "make": "Chevrolet",
+    "sourceMakes": [
+      "CHEVROLET"
+    ],
+    "modelCount": 15,
+    "fuelCount": 39,
+    "engineSizeCount": 193,
+    "yearCount": 254
+  },
+  {
+    "make": "Chrysler",
+    "sourceMakes": [
+      "CHRYSLER"
+    ],
+    "modelCount": 26,
+    "fuelCount": 54,
+    "engineSizeCount": 247,
+    "yearCount": 316
+  },
+  {
+    "make": "Citroen",
+    "sourceMakes": [
+      "CITROEN"
+    ],
+    "modelCount": 75,
+    "fuelCount": 180,
+    "engineSizeCount": 506,
+    "yearCount": 877
+  },
+  {
+    "make": "Coleman Milne",
+    "sourceMakes": [
+      "COLEMAN MILNE"
+    ],
+    "modelCount": 3,
+    "fuelCount": 11,
+    "engineSizeCount": 8,
+    "yearCount": 25
+  },
+  {
+    "make": "Corvette",
+    "sourceMakes": [
+      "CORVETTE"
+    ],
+    "modelCount": 3,
+    "fuelCount": 5,
+    "engineSizeCount": 44,
+    "yearCount": 65
+  },
+  {
+    "make": "Cupra",
+    "sourceMakes": [
+      "CUPRA"
+    ],
+    "modelCount": 7,
+    "fuelCount": 15,
+    "engineSizeCount": 12,
+    "yearCount": 20
+  },
+  {
+    "make": "Dacia",
+    "sourceMakes": [
+      "DACIA"
+    ],
+    "modelCount": 10,
+    "fuelCount": 25,
+    "engineSizeCount": 42,
+    "yearCount": 93
+  },
+  {
+    "make": "Daewoo",
+    "sourceMakes": [
+      "DAEWOO"
+    ],
+    "modelCount": 12,
+    "fuelCount": 29,
+    "engineSizeCount": 95,
+    "yearCount": 91
+  },
+  {
+    "make": "Daihatsu",
+    "sourceMakes": [
+      "DAIHATSU"
+    ],
+    "modelCount": 24,
+    "fuelCount": 57,
+    "engineSizeCount": 130,
+    "yearCount": 298
+  },
+  {
+    "make": "Daimler",
+    "sourceMakes": [
+      "DAIMLER"
+    ],
+    "modelCount": 22,
+    "fuelCount": 42,
+    "engineSizeCount": 243,
+    "yearCount": 340
+  },
+  {
+    "make": "De Tomaso",
+    "sourceMakes": [
+      "DE TOMASO"
+    ],
+    "modelCount": 1,
+    "fuelCount": 2,
+    "engineSizeCount": 20,
+    "yearCount": 26
+  },
+  {
+    "make": "DFSK",
+    "sourceMakes": [
+      "DFSK"
+    ],
+    "modelCount": 9,
+    "fuelCount": 12,
+    "engineSizeCount": 19,
+    "yearCount": 38
+  },
+  {
+    "make": "Dodge",
+    "sourceMakes": [
+      "DODGE"
+    ],
+    "modelCount": 11,
+    "fuelCount": 33,
+    "engineSizeCount": 168,
+    "yearCount": 217
+  },
+  {
+    "make": "DS",
+    "sourceMakes": [
+      "DS"
+    ],
+    "modelCount": 10,
+    "fuelCount": 31,
+    "engineSizeCount": 32,
+    "yearCount": 45
+  },
+  {
+    "make": "Farizon",
+    "sourceMakes": [
+      "FARIZON"
+    ],
+    "modelCount": 2,
+    "fuelCount": 2,
+    "engineSizeCount": 0,
+    "yearCount": 0
+  },
+  {
+    "make": "Ferrari",
+    "sourceMakes": [
+      "FERRARI"
+    ],
+    "modelCount": 26,
+    "fuelCount": 35,
+    "engineSizeCount": 128,
+    "yearCount": 229
+  },
+  {
+    "make": "Fiat",
+    "sourceMakes": [
+      "FIAT"
+    ],
+    "modelCount": 184,
+    "fuelCount": 301,
+    "engineSizeCount": 797,
+    "yearCount": 1325
+  },
+  {
+    "make": "Fisker",
+    "sourceMakes": [
+      "FISKER"
+    ],
+    "modelCount": 2,
+    "fuelCount": 3,
+    "engineSizeCount": 3,
+    "yearCount": 4
+  },
+  {
+    "make": "Ford",
+    "sourceMakes": [
+      "FORD"
+    ],
+    "modelCount": 110,
+    "fuelCount": 278,
+    "engineSizeCount": 1513,
+    "yearCount": 1735
+  },
+  {
+    "make": "Genesis",
+    "sourceMakes": [
+      "GENESIS"
+    ],
+    "modelCount": 6,
+    "fuelCount": 14,
+    "engineSizeCount": 19,
+    "yearCount": 24
+  },
+  {
+    "make": "GWM",
+    "sourceMakes": [
+      "GWM"
+    ],
+    "modelCount": 5,
+    "fuelCount": 7,
+    "engineSizeCount": 2,
+    "yearCount": 2
+  },
+  {
+    "make": "Honda",
+    "sourceMakes": [
+      "HONDA"
+    ],
+    "modelCount": 456,
+    "fuelCount": 613,
+    "engineSizeCount": 1483,
+    "yearCount": 4318
+  },
+  {
+    "make": "Hummer",
+    "sourceMakes": [
+      "HUMMER"
+    ],
+    "modelCount": 4,
+    "fuelCount": 14,
+    "engineSizeCount": 45,
+    "yearCount": 50
+  },
+  {
+    "make": "Hyundai",
+    "sourceMakes": [
+      "HYUNDAI"
+    ],
+    "modelCount": 49,
+    "fuelCount": 118,
+    "engineSizeCount": 301,
+    "yearCount": 440
+  },
+  {
+    "make": "Ineos",
+    "sourceMakes": [
+      "INEOS"
+    ],
+    "modelCount": 3,
+    "fuelCount": 7,
+    "engineSizeCount": 3,
+    "yearCount": 7
+  },
+  {
+    "make": "Infiniti",
+    "sourceMakes": [
+      "INFINITI"
+    ],
+    "modelCount": 20,
+    "fuelCount": 41,
+    "engineSizeCount": 87,
+    "yearCount": 109
+  },
+  {
+    "make": "Isuzu",
+    "sourceMakes": [
+      "ISUZU"
+    ],
+    "modelCount": 9,
+    "fuelCount": 21,
+    "engineSizeCount": 110,
+    "yearCount": 145
+  },
+  {
+    "make": "Isuzu Truck",
+    "sourceMakes": [
+      "ISUZU TRUCKS"
+    ],
+    "modelCount": 6,
+    "fuelCount": 15,
+    "engineSizeCount": 88,
+    "yearCount": 108
+  },
+  {
+    "make": "Iveco",
+    "sourceMakes": [
+      "IVECO"
+    ],
+    "modelCount": 17,
+    "fuelCount": 35,
+    "engineSizeCount": 170,
+    "yearCount": 152
+  },
+  {
+    "make": "Jaecoo",
+    "sourceMakes": [
+      "JAECOO"
+    ],
+    "modelCount": 3,
+    "fuelCount": 5,
+    "engineSizeCount": 3,
+    "yearCount": 2
+  },
+  {
+    "make": "Jaguar",
+    "sourceMakes": [
+      "JAGUAR"
+    ],
+    "modelCount": 26,
+    "fuelCount": 74,
+    "engineSizeCount": 448,
+    "yearCount": 496
+  },
+  {
+    "make": "Jeep",
+    "sourceMakes": [
+      "JEEP"
+    ],
+    "modelCount": 10,
+    "fuelCount": 37,
+    "engineSizeCount": 210,
+    "yearCount": 252
+  },
+  {
+    "make": "KGM / Ssangyong",
+    "sourceMakes": [
+      "KGM",
+      "SSANGYONG"
+    ],
+    "modelCount": 15,
+    "fuelCount": 33,
+    "engineSizeCount": 66,
+    "yearCount": 125
+  },
+  {
+    "make": "Kia",
+    "sourceMakes": [
+      "KIA"
+    ],
+    "modelCount": 26,
+    "fuelCount": 83,
+    "engineSizeCount": 178,
+    "yearCount": 339
+  },
+  {
+    "make": "Lamborghini",
+    "sourceMakes": [
+      "LAMBORGHINI"
+    ],
+    "modelCount": 15,
+    "fuelCount": 19,
+    "engineSizeCount": 105,
+    "yearCount": 150
+  },
+  {
+    "make": "Land Rover",
+    "sourceMakes": [
+      "LAND ROVER"
+    ],
+    "modelCount": 15,
+    "fuelCount": 75,
+    "engineSizeCount": 501,
+    "yearCount": 486
+  },
+  {
+    "make": "LDV",
+    "sourceMakes": [
+      "LDV"
+    ],
+    "modelCount": 6,
+    "fuelCount": 18,
+    "engineSizeCount": 82,
+    "yearCount": 87
+  },
+  {
+    "make": "LDV (SAIC)",
+    "sourceMakes": [
+      "LDV",
+      "LDV LIMITED",
+      "MAXUS",
+      "SAIC"
+    ],
+    "modelCount": 15,
+    "fuelCount": 32,
+    "engineSizeCount": 97,
+    "yearCount": 107
+  },
+  {
+    "make": "Leapmotor",
+    "sourceMakes": [
+      "LEAPMOTOR"
+    ],
+    "modelCount": 2,
+    "fuelCount": 2,
+    "engineSizeCount": 0,
+    "yearCount": 0
+  },
+  {
+    "make": "LEVC",
+    "sourceMakes": [
+      "LEVC"
+    ],
+    "modelCount": 3,
+    "fuelCount": 7,
+    "engineSizeCount": 6,
+    "yearCount": 15
+  },
+  {
+    "make": "Lexus",
+    "sourceMakes": [
+      "LEXUS"
+    ],
+    "modelCount": 41,
+    "fuelCount": 87,
+    "engineSizeCount": 166,
+    "yearCount": 350
+  },
+  {
+    "make": "Ligier",
+    "sourceMakes": [
+      "LIGIER"
+    ],
+    "modelCount": 3,
+    "fuelCount": 8,
+    "engineSizeCount": 8,
+    "yearCount": 19
+  },
+  {
+    "make": "London Taxi's International",
+    "sourceMakes": [
+      "LONDON TAXIS INT",
+      "LONDON TAXIS INT.",
+      "LTI CARBODIES"
+    ],
+    "modelCount": 5,
+    "fuelCount": 17,
+    "engineSizeCount": 41,
+    "yearCount": 59
+  },
+  {
+    "make": "Lotus",
+    "sourceMakes": [
+      "LOTUS"
+    ],
+    "modelCount": 15,
+    "fuelCount": 25,
+    "engineSizeCount": 153,
+    "yearCount": 306
+  },
+  {
+    "make": "Mahindra",
+    "sourceMakes": [
+      "MAHINDRA"
+    ],
+    "modelCount": 2,
+    "fuelCount": 5,
+    "engineSizeCount": 26,
+    "yearCount": 45
+  },
+  {
+    "make": "M.A.N.",
+    "sourceMakes": [
+      "MAN"
+    ],
+    "modelCount": 6,
+    "fuelCount": 13,
+    "engineSizeCount": 101,
+    "yearCount": 68
+  },
+  {
+    "make": "Marcos",
+    "sourceMakes": [
+      "MARCOS"
+    ],
+    "modelCount": 1,
+    "fuelCount": 2,
+    "engineSizeCount": 37,
+    "yearCount": 47
+  },
+  {
+    "make": "Maserati",
+    "sourceMakes": [
+      "MASERATI"
+    ],
+    "modelCount": 26,
+    "fuelCount": 46,
+    "engineSizeCount": 140,
+    "yearCount": 310
+  },
+  {
+    "make": "MAXUS",
+    "sourceMakes": [
+      "MAXUS"
+    ],
+    "modelCount": 7,
+    "fuelCount": 12,
+    "engineSizeCount": 13,
+    "yearCount": 18
+  },
+  {
+    "make": "Maybach",
+    "sourceMakes": [
+      "MAYBACH"
+    ],
+    "modelCount": 3,
+    "fuelCount": 5,
+    "engineSizeCount": 10,
+    "yearCount": 28
+  },
+  {
+    "make": "Mazda",
+    "sourceMakes": [
+      "MAZDA"
+    ],
+    "modelCount": 54,
+    "fuelCount": 118,
+    "engineSizeCount": 394,
+    "yearCount": 623
+  },
+  {
+    "make": "McLaren",
+    "sourceMakes": [
+      "MCLAREN"
+    ],
+    "modelCount": 18,
+    "fuelCount": 23,
+    "engineSizeCount": 43,
+    "yearCount": 104
+  },
+  {
+    "make": "Mercedes-Benz",
+    "sourceMakes": [
+      "MERCEDES-BENZ"
+    ],
+    "modelCount": 81,
+    "fuelCount": 103,
+    "engineSizeCount": 91,
+    "yearCount": 101
+  },
+  {
+    "make": "MG",
+    "sourceMakes": [
+      "MG"
+    ],
+    "modelCount": 29,
+    "fuelCount": 68,
+    "engineSizeCount": 323,
+    "yearCount": 473
+  },
+  {
+    "make": "Mia-Electric Vehicle",
+    "sourceMakes": [
+      "MIA",
+      "MIA ELECTRIC"
+    ],
+    "modelCount": 5,
+    "fuelCount": 7,
+    "engineSizeCount": 7,
+    "yearCount": 10
+  },
+  {
+    "make": "Microcar",
+    "sourceMakes": [
+      "MICROCAR"
+    ],
+    "modelCount": 6,
+    "fuelCount": 10,
+    "engineSizeCount": 8,
+    "yearCount": 40
+  },
+  {
+    "make": "MINI",
+    "sourceMakes": [
+      "MINI"
+    ],
+    "modelCount": 19,
+    "fuelCount": 42,
+    "engineSizeCount": 97,
+    "yearCount": 232
+  },
+  {
+    "make": "Mitsubishi",
+    "sourceMakes": [
+      "MITSUBISHI"
+    ],
+    "modelCount": 41,
+    "fuelCount": 104,
+    "engineSizeCount": 375,
+    "yearCount": 555
+  },
+  {
+    "make": "Mitsubishi Fuso",
+    "sourceMakes": [
+      "MITSUBISHI FUSO"
+    ],
+    "modelCount": 2,
+    "fuelCount": 6,
+    "engineSizeCount": 16,
+    "yearCount": 44
+  },
+  {
+    "make": "Morgan",
+    "sourceMakes": [
+      "MORGAN"
+    ],
+    "modelCount": 11,
+    "fuelCount": 17,
+    "engineSizeCount": 129,
+    "yearCount": 366
+  },
+  {
+    "make": "Nissan",
+    "sourceMakes": [
+      "NISSAN"
+    ],
+    "modelCount": 65,
+    "fuelCount": 165,
+    "engineSizeCount": 612,
+    "yearCount": 972
+  },
+  {
+    "make": "Noble",
+    "sourceMakes": [
+      "NOBLE"
+    ],
+    "modelCount": 2,
+    "fuelCount": 3,
+    "engineSizeCount": 5,
+    "yearCount": 7
+  },
+  {
+    "make": "Omoda",
+    "sourceMakes": [
+      "OMODA"
+    ],
+    "modelCount": 6,
+    "fuelCount": 10,
+    "engineSizeCount": 4,
+    "yearCount": 3
+  },
+  {
+    "make": "ORA",
+    "sourceMakes": [
+      "ORA"
+    ],
+    "modelCount": 8,
+    "fuelCount": 8,
+    "engineSizeCount": 6,
+    "yearCount": 8
+  },
+  {
+    "make": "Perodua",
+    "sourceMakes": [
+      "PERODUA"
+    ],
+    "modelCount": 5,
+    "fuelCount": 10,
+    "engineSizeCount": 23,
+    "yearCount": 49
+  },
+  {
+    "make": "Peugeot",
+    "sourceMakes": [
+      "PEUGEOT"
+    ],
+    "modelCount": 135,
+    "fuelCount": 284,
+    "engineSizeCount": 716,
+    "yearCount": 1359
+  },
+  {
+    "make": "Piaggio",
+    "sourceMakes": [
+      "PIAGGIO"
+    ],
+    "modelCount": 52,
+    "fuelCount": 85,
+    "engineSizeCount": 184,
+    "yearCount": 781
+  },
+  {
+    "make": "Polestar",
+    "sourceMakes": [
+      "POLESTAR"
+    ],
+    "modelCount": 6,
+    "fuelCount": 9,
+    "engineSizeCount": 9,
+    "yearCount": 16
+  },
+  {
+    "make": "Porsche",
+    "sourceMakes": [
+      "PORSCHE"
+    ],
+    "modelCount": 16,
+    "fuelCount": 52,
+    "engineSizeCount": 292,
+    "yearCount": 368
+  },
+  {
+    "make": "Proton",
+    "sourceMakes": [
+      "PROTON"
+    ],
+    "modelCount": 17,
+    "fuelCount": 36,
+    "engineSizeCount": 76,
+    "yearCount": 154
+  },
+  {
+    "make": "Reliant",
+    "sourceMakes": [
+      "RELIANT"
+    ],
+    "modelCount": 17,
+    "fuelCount": 33,
+    "engineSizeCount": 215,
+    "yearCount": 222
+  },
+  {
+    "make": "Renault",
+    "sourceMakes": [
+      "RENAULT"
+    ],
+    "modelCount": 72,
+    "fuelCount": 160,
+    "engineSizeCount": 642,
+    "yearCount": 987
+  },
+  {
+    "make": "Renault Trucks",
+    "sourceMakes": [
+      "RENAULT TRUCKS"
+    ],
+    "modelCount": 8,
+    "fuelCount": 14,
+    "engineSizeCount": 98,
+    "yearCount": 74
+  },
+  {
+    "make": "Rolls-Royce",
+    "sourceMakes": [
+      "ROLLS ROYCE"
+    ],
+    "modelCount": 15,
+    "fuelCount": 27,
+    "engineSizeCount": 129,
+    "yearCount": 296
+  },
+  {
+    "make": "Rover",
+    "sourceMakes": [
+      "ROVER"
+    ],
+    "modelCount": 28,
+    "fuelCount": 83,
+    "engineSizeCount": 415,
+    "yearCount": 536
+  },
+  {
+    "make": "Saab",
+    "sourceMakes": [
+      "SAAB"
+    ],
+    "modelCount": 9,
+    "fuelCount": 27,
+    "engineSizeCount": 129,
+    "yearCount": 201
+  },
+  {
+    "make": "San",
+    "sourceMakes": [
+      "SAN"
+    ],
+    "modelCount": 2,
+    "fuelCount": 2,
+    "engineSizeCount": 2,
+    "yearCount": 4
+  },
+  {
+    "make": "Santana",
+    "sourceMakes": [
+      "SANTANA"
+    ],
+    "modelCount": 2,
+    "fuelCount": 4,
+    "engineSizeCount": 7,
+    "yearCount": 12
+  },
+  {
+    "make": "SEAT",
+    "sourceMakes": [
+      "SEAT"
+    ],
+    "modelCount": 17,
+    "fuelCount": 48,
+    "engineSizeCount": 174,
+    "yearCount": 278
+  },
+  {
+    "make": "Seres",
+    "sourceMakes": [
+      "SERES"
+    ],
+    "modelCount": 1,
+    "fuelCount": 1,
+    "engineSizeCount": 1,
+    "yearCount": 1
+  },
+  {
+    "make": "Skoda",
+    "sourceMakes": [
+      "SKODA"
+    ],
+    "modelCount": 26,
+    "fuelCount": 67,
+    "engineSizeCount": 186,
+    "yearCount": 300
+  },
+  {
+    "make": "Skywell",
+    "sourceMakes": [
+      "SKYWELL"
+    ],
+    "modelCount": 2,
+    "fuelCount": 2,
+    "engineSizeCount": 2,
+    "yearCount": 2
+  },
+  {
+    "make": "Smart",
+    "sourceMakes": [
+      "SMART"
+    ],
+    "modelCount": 15,
+    "fuelCount": 29,
+    "engineSizeCount": 68,
+    "yearCount": 96
+  },
+  {
+    "make": "Smart Car",
+    "sourceMakes": [
+      "SMART"
+    ],
+    "modelCount": 15,
+    "fuelCount": 29,
+    "engineSizeCount": 68,
+    "yearCount": 96
+  },
+  {
+    "make": "Spectre",
+    "sourceMakes": [
+      "ROLLS ROYCE"
+    ],
+    "modelCount": 15,
+    "fuelCount": 27,
+    "engineSizeCount": 129,
+    "yearCount": 296
+  },
+  {
+    "make": "Subaru",
+    "sourceMakes": [
+      "SUBARU"
+    ],
+    "modelCount": 31,
+    "fuelCount": 53,
+    "engineSizeCount": 181,
+    "yearCount": 347
+  },
+  {
+    "make": "Suzuki",
+    "sourceMakes": [
+      "SUZUKI"
+    ],
+    "modelCount": 182,
+    "fuelCount": 269,
+    "engineSizeCount": 662,
+    "yearCount": 1949
+  },
+  {
+    "make": "Tata",
+    "sourceMakes": [
+      "TATA"
+    ],
+    "modelCount": 5,
+    "fuelCount": 12,
+    "engineSizeCount": 20,
+    "yearCount": 54
+  },
+  {
+    "make": "Tesla",
+    "sourceMakes": [
+      "TESLA"
+    ],
+    "modelCount": 6,
+    "fuelCount": 8,
+    "engineSizeCount": 7,
+    "yearCount": 51
+  },
+  {
+    "make": "Toyota",
+    "sourceMakes": [
+      "TOYOTA"
+    ],
+    "modelCount": 65,
+    "fuelCount": 202,
+    "engineSizeCount": 769,
+    "yearCount": 1303
+  },
+  {
+    "make": "TVR",
+    "sourceMakes": [
+      "TVR"
+    ],
+    "modelCount": 14,
+    "fuelCount": 21,
+    "engineSizeCount": 181,
+    "yearCount": 172
+  },
+  {
+    "make": "Vauxhall",
+    "sourceMakes": [
+      "VAUXHALL"
+    ],
+    "modelCount": 62,
+    "fuelCount": 164,
+    "engineSizeCount": 743,
+    "yearCount": 939
+  },
+  {
+    "make": "Volkswagen",
+    "sourceMakes": [
+      "VOLKSWAGEN"
+    ],
+    "modelCount": 94,
+    "fuelCount": 246,
+    "engineSizeCount": 977,
+    "yearCount": 1671
+  },
+  {
+    "make": "Volvo",
+    "sourceMakes": [
+      "VOLVO"
+    ],
+    "modelCount": 69,
+    "fuelCount": 176,
+    "engineSizeCount": 632,
+    "yearCount": 822
+  },
+  {
+    "make": "Westfield",
+    "sourceMakes": [
+      "WESTFIELD"
+    ],
+    "modelCount": 1,
+    "fuelCount": 4,
+    "engineSizeCount": 40,
+    "yearCount": 58
+  },
+  {
+    "make": "XPENG",
+    "sourceMakes": [
+      "XPENG"
+    ],
+    "modelCount": 3,
+    "fuelCount": 3,
+    "engineSizeCount": 3,
+    "yearCount": 3
+  }
+]
