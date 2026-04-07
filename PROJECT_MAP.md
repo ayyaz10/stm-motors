@@ -200,6 +200,7 @@ Important schema / SQL files:
 - `vehicle_check_ins.sql`: storage bucket for vehicle photos
 - `supabase/vehicle_catalog.sql`: vehicle catalog tables/policies
 - `supabase/generated/*`: generated seed and support files for vehicle catalog data
+  - repo hygiene note: raw generated CSV/report artifacts are ignored in GitHub, while reusable SQL seed outputs and generator scripts stay tracked
 
 Storage flow:
 - Vehicle images are uploaded to the `vehicle-checks` storage bucket

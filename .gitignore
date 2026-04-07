@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 .tmp/
 insipration/
+supabase/generated/*.csv
+supabase/generated/*.json
