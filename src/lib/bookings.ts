@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { resolveBookingCoordinates } from "./bookingLocation";
 
 export interface BookingPayload {
   full_name: string;
@@ -32,6 +33,13 @@ export interface CreatedBooking {
 export async function createBooking(
   payload: BookingPayload,
 ): Promise<CreatedBooking> {
+  const coordinates = await resolveBookingCoordinates({
+    street_address_1: payload.street_address_1,
+    street_address_2: payload.street_address_2,
+    city: payload.city,
+    postcode: payload.postcode,
+  });
+
   const { data, error } = await supabase.rpc("create_public_booking", {
     p_full_name: payload.full_name,
     p_phone: payload.phone,
@@ -48,6 +56,9 @@ export async function createBooking(
     p_year: payload.year,
     p_selected_services: payload.selected_services,
     p_total_price: payload.total_price,
+    p_latitude: coordinates.latitude,
+    p_longitude: coordinates.longitude,
+    p_geocoded_at: coordinates.geocodedAt,
   });
 
   if (error) {

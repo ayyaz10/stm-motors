@@ -40,6 +40,8 @@ Repo root:
 - `supabase/`: database SQL for vehicle catalog and generated seed files
 - `scripts/`: one-off data generation scripts for vehicle catalog imports
 - `public/`: static frontend assets
+- `.env.local`: local runtime config for Vite env vars such as Supabase URL/key
+- `.env.example`: safe example env file for onboarding
 - `dist/`: build output
 - `*.sql` in root: business schema changes and workflow tables for bookings, jobs, and vehicle check-ins
 
@@ -64,7 +66,7 @@ Repo root:
 
 Current state:
 - Database auth foundations now exist in `auth_staff_profiles.sql`.
-- Supabase client setup lives in `src/lib/supabase.ts`.
+- Supabase client setup lives in `src/lib/supabase.ts` and now reads from Vite env vars.
 - Frontend staff session state now loads in `src/App.tsx`.
 - Staff email/password login now lives in `src/pages/StaffLoginPage.tsx`.
 - Staff profile loading and role checks now live in `src/App.tsx`.
@@ -99,7 +101,9 @@ Core modules:
 - `src/lib/mechanics.ts`: mechanic dropdown data for ops assignment
 - `src/lib/mechanicJobs.ts`: mechanic dashboard job loading and progress summaries
 - `src/lib/supabase.ts`: shared Supabase client
+  - expects `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from Vite env files
 - `src/lib/bookings.ts`: creates customer bookings through a secure RPC instead of direct table reads
+  - now also tries to geocode the booking address before insert so new bookings can store coordinates immediately
 - `src/lib/jobs.ts`: create/delete/unassign jobs, complete assigned jobs through RPC, and load booking assignment candidates
   - also reopens closed jobs for ops/admin through a controlled RPC
 - `src/lib/jobWorkflow.ts`: orchestrates job creation, service snapshots, checklist data, and overview/progress loading
@@ -170,6 +174,7 @@ Test/helper components:
 
 High-level flow:
 1. Customer creates a booking through `public.create_public_booking(...)`
+  - the frontend now attempts geocoding before the booking RPC runs, so latitude/longitude can be stored at creation time
 2. Staff users exist in Supabase Auth and get a matching row in `profiles`
 3. Ops loads bookings waiting for assignment
 4. Ops creates a row in `jobs`
@@ -186,6 +191,7 @@ High-level flow:
 Important schema / SQL files:
 - `auth_staff_profiles.sql`: staff profiles, staff role helpers, and job-to-mechanic user link
 - `bookings_public_access.sql`: secure public booking RPC plus minimal staff booking read policies
+  - the booking RPC now accepts optional coordinates and stores them with the booking when geocoding succeeds
 - `jobs_staff_access.sql`: authenticated ops/admin policies for creating and reading jobs, job services, and checklist rows, while dropping old anon access
 - `job_status_access.sql`: ops/admin job update policy plus `public.complete_assigned_job(...)` for secure mechanic completion
   - also contains `public.reopen_job_for_ops(...)` for controlled reopening of closed jobs
@@ -247,6 +253,7 @@ Vehicle check-in:
 
 Location logic:
 - `src/lib/bookingLocation.ts` builds display addresses, Google Maps links, and missing coordinate recovery
+- new bookings now try to geocode before insert, while overview pages still keep the retry path for older bookings with missing coordinates
 - If exact coordinates are missing, the app attempts address geocoding and postcode fallback lookup
 - Saved booking coordinates now go through a dedicated security-definer RPC because direct frontend updates were blocked by booking RLS
 

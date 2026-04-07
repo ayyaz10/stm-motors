@@ -32,6 +32,12 @@ export interface EnsuredBookingCoordinates {
   source: "stored" | "geocoded" | "missing";
 }
 
+export interface ResolvedBookingCoordinates {
+  latitude: number | null;
+  longitude: number | null;
+  geocodedAt: string | null;
+}
+
 function isFiniteCoordinate(value: number | null): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
@@ -197,6 +203,29 @@ async function geocodeBookingAddress(
     console.error("Postcode geocoding failed", address.postcode, error);
     return null;
   }
+}
+
+export async function resolveBookingCoordinates(
+  address: Pick<
+    BookingLocationAddress,
+    "street_address_1" | "street_address_2" | "city" | "postcode"
+  >,
+): Promise<ResolvedBookingCoordinates> {
+  const coordinates = await geocodeBookingAddress(address);
+
+  if (!coordinates) {
+    return {
+      latitude: null,
+      longitude: null,
+      geocodedAt: null,
+    };
+  }
+
+  return {
+    latitude: coordinates.latitude,
+    longitude: coordinates.longitude,
+    geocodedAt: new Date().toISOString(),
+  };
 }
 
 async function fetchBookingLocationRow(

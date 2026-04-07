@@ -7,6 +7,24 @@ drop policy if exists "Authenticated users can read bookings" on public.bookings
 drop policy if exists "Ops and admin can read bookings" on public.bookings;
 drop policy if exists "Staff can read operational bookings" on public.bookings;
 
+drop function if exists public.create_public_booking(
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text[],
+  numeric
+);
+
 create or replace function public.create_public_booking(
   p_full_name text,
   p_phone text,
@@ -22,7 +40,10 @@ create or replace function public.create_public_booking(
   p_engine text,
   p_year text,
   p_selected_services text[],
-  p_total_price numeric
+  p_total_price numeric,
+  p_latitude double precision default null,
+  p_longitude double precision default null,
+  p_geocoded_at timestamptz default null
 )
 returns jsonb
 language plpgsql
@@ -32,6 +53,18 @@ as $$
 declare
   v_booking public.bookings%rowtype;
 begin
+  if (p_latitude is null) <> (p_longitude is null) then
+    raise exception 'Latitude and longitude must be provided together.';
+  end if;
+
+  if p_latitude is not null and (p_latitude < -90 or p_latitude > 90) then
+    raise exception 'Latitude is out of range.';
+  end if;
+
+  if p_longitude is not null and (p_longitude < -180 or p_longitude > 180) then
+    raise exception 'Longitude is out of range.';
+  end if;
+
   insert into public.bookings (
     full_name,
     phone,
@@ -47,7 +80,10 @@ begin
     engine,
     year,
     selected_services,
-    total_price
+    total_price,
+    latitude,
+    longitude,
+    geocoded_at
   )
   values (
     p_full_name,
@@ -64,7 +100,13 @@ begin
     p_engine,
     p_year,
     p_selected_services,
-    p_total_price
+    p_total_price,
+    p_latitude,
+    p_longitude,
+    case
+      when p_latitude is null or p_longitude is null then null
+      else coalesce(p_geocoded_at, timezone('utc'::text, now()))
+    end
   )
   returning * into v_booking;
 
@@ -96,7 +138,10 @@ revoke all on function public.create_public_booking(
   text,
   text,
   text[],
-  numeric
+  numeric,
+  double precision,
+  double precision,
+  timestamptz
 ) from public;
 
 grant execute on function public.create_public_booking(
@@ -114,7 +159,10 @@ grant execute on function public.create_public_booking(
   text,
   text,
   text[],
-  numeric
+  numeric,
+  double precision,
+  double precision,
+  timestamptz
 ) to anon, authenticated;
 
 create policy "Staff can read operational bookings"
