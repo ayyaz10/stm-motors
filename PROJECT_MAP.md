@@ -24,12 +24,16 @@ Main route/page map:
 - `src/pages/OpsAssignJobPage.tsx`: ops assigns mechanics and creates jobs
   - also handles active job edits for mechanic, schedule, and ops notes
   - closed jobs can be reopened here with a reason before any further edits are allowed
-- `src/pages/OpsJobProgressPage.tsx`: ops progress board
+- `src/pages/OpsJobProgressPage.tsx`: ops progress workspace with both board and table views
+  - includes search, status/mechanic filters, date range filters, CSV export, sortable columns, and saved workspace filters for day-to-day ops control
 - `src/pages/MechanicDashboardPage.tsx`: mechanic landing page showing active and previous jobs
+  - completed jobs now show only a minimal vehicle-facing summary, not customer contact/location data
 - `src/pages/MechanicJobOverviewPage.tsx`: mechanic overview and single guided start entry point
   - also serves as a read-only job review page for ops/admin
   - retries missing map coordinates when needed and shows a visible refresh error state
+  - ops/admin review mode now keeps customer location visible even after completion, but removes mechanic start/workflow actions
 - `src/pages/VehicleCheckInPage.tsx`: mechanic guided step 1, including submitted-state navigation
+  - now collects a numeric odometer reading plus the odometer photo
 - `src/pages/ServiceChecklistPage.tsx`: mechanic guided step 2 with final service submission
   - both pages now also support read-only ops/admin review mode
 
@@ -109,6 +113,7 @@ Core modules:
 - `src/lib/jobWorkflow.ts`: orchestrates job creation, service snapshots, checklist data, and overview/progress loading
 - `src/lib/vehicleCheckIns.ts`: vehicle check-in uploads and signed photo URLs
   - also updates an existing check-in record when the mechanic revisits step 1
+  - stores the numeric odometer reading with the check-in
 - `src/lib/bookingLocation.ts`: booking location lookup, geocoding, and map URL building
   - saves coordinates through a secure RPC instead of direct booking table updates
 - `src/lib/vehicles.ts`: vehicle catalog queries
@@ -128,7 +133,8 @@ State patterns:
 
 Examples:
 - `src/App.tsx`: owns app-level staff session/profile state, listens for auth changes, and protects role-based routes
-  - job overview route now allows ops/admin review access while keeping mechanic workflow actions disabled for ops
+- job overview route now allows ops/admin review access while keeping mechanic workflow actions disabled for ops
+- review mode no longer shows the mechanic `Start the service` action card or any extra summary card; ops/admin now review the real job sections directly
   - check-in and checklist routes now do the same for review-only ops/admin access
 - `src/pages/StaffLoginPage.tsx`: owns staff login form state and sign-in/sign-out actions
 - `src/pages/CarSelectionPage.tsx`: owns multi-step booking state and persists it to `localStorage`
@@ -136,7 +142,7 @@ Examples:
 - `src/pages/OpsAssignJobPage.tsx`: owns booking selection, assignment form state, loading state, and workflow actions
   - the same form now handles both new job creation and active job editing for ops/admin
   - closed jobs use a dedicated reopen mode with required reason and optional workflow reset
-- `src/pages/OpsJobProgressPage.tsx`: owns progress board filters and load state
+- `src/pages/OpsJobProgressPage.tsx`: owns progress board/table toggle, search, sorting, filters, CSV export, saved workspace state, and load state
 - `src/pages/MechanicDashboardPage.tsx`: owns mechanic dashboard tabs, load state, and dashboard refresh
 - `src/pages/MechanicJobOverviewPage.tsx`: owns job overview load state and decides whether Start goes to check-in or checklist
   - when opened from ops, the same page switches into read-only review mode
@@ -198,6 +204,7 @@ Important schema / SQL files:
 - `mechanic_job_access.sql`: authenticated mechanic policies for reading only their own jobs, updating only their own checklist rows, and reading only their own check-ins
 - `mechanic_directory.sql`: SQL function used by ops to fetch mechanics for the assignment dropdown
 - `vehicle_check_in_staff_access.sql`: authenticated mechanic check-in insert/update policies, one-check-in-per-job guard, and folder-scoped storage/photo access for assigned jobs only
+- `mechanic_privacy_and_odometer.sql`: incremental migration for odometer reading, job snapshots, and completed-job privacy locks for mechanics
 - `booking_and_job_references.sql`: booking number and job reference generation plus the base `jobs` table
 - `mechanic_job_workflow.sql`: job services and checklist snapshot tables
 - `vehicle_check_ins.sql`: base check-in table and storage bucket
@@ -233,14 +240,16 @@ Job workflow:
 - `Job Overview` has one Start action
 - ops/admin can open the same overview in review mode without starting mechanic workflow
 - `Vehicle Check-In` is step 1
+- step 1 now saves a numeric odometer reading as structured service-history data
 - `Service Checklist` is step 2
 - Final service submission returns the mechanic to their dashboard
-- ops/admin can also open steps 1 and 2 in read-only mode from the progress board for review
+- ops/admin can also open steps 1 and 2 in read-only mode from the progress workspace for review
 
 Job progress:
 - `src/lib/jobProgress.ts` derives business progress states from job status, check-in presence, and checklist completion
 - Visible location access is based on derived job progress status
 - `src/lib/mechanicJobs.ts` builds the mechanic dashboard by combining assigned jobs, booking details, check-in state, and checklist totals
+- `src/lib/jobWorkflow.ts` also powers the ops jobs workspace, which reuses the same progress dataset for both table and board views
 
 Vehicle check-in:
 - Validation helpers live in `src/utils/vehicleCheckInValidation.ts`
@@ -250,6 +259,7 @@ Vehicle check-in:
 - Re-opening the check-in page after submission loads the saved state back into the form so mechanics can update it until the job is completed or cancelled
 - Database now keeps one check-in row per job and updates that record instead of creating repeated rows for the same job
 - If ops/admin reopens a completed job with workflow reset enabled, the saved check-in row is removed and checklist progress is cleared so the mechanic can start again from step 1
+- Once a job is completed, mechanics should no longer receive booking contact details, address/location data, or saved arrival photos; only ops/admin keep full review access
 
 Location logic:
 - `src/lib/bookingLocation.ts` builds display addresses, Google Maps links, and missing coordinate recovery

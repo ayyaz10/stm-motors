@@ -16,6 +16,7 @@ export interface VehicleCheckInInsertPayload {
   job_id: string | null;
   mechanic_name: string;
   mechanic_phone: string | null;
+  odometer_reading: number | null;
   visible_damage: boolean | null;
   warning_lights: boolean | null;
   notes: string | null;

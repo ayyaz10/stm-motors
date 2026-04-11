@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   CarFront,
@@ -71,7 +71,7 @@ function MechanicJobOverviewPage({
     [jobId, jobReference],
   );
 
-  const loadWorkflow = async () => {
+  const loadWorkflow = useCallback(async () => {
     if (!reference) {
       setLoadError("No job reference was provided.");
       setIsLoading(false);
@@ -96,11 +96,52 @@ function MechanicJobOverviewPage({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [reference]);
 
   useEffect(() => {
     void loadWorkflow();
-  }, [reference]);
+  }, [loadWorkflow]);
+
+  const handleRefreshLocation = useCallback(
+    async (markAttempted = false) => {
+      if (!workflow || isRefreshingLocation) {
+        return;
+      }
+
+      try {
+        setIsRefreshingLocation(true);
+        setLocationRefreshError(null);
+
+        if (markAttempted) {
+          setHasAttemptedLocationRefresh(true);
+        }
+
+        const ensuredCoordinates = await ensureBookingCoordinates(
+          workflow.booking.id,
+        );
+
+        if (ensuredCoordinates.source === "missing") {
+          setLocationRefreshError(
+            "Coordinates could not be generated from this address yet. Check the address or try again later.",
+          );
+          return;
+        }
+
+        const refreshedWorkflow = await fetchJobWorkflowOverview(reference);
+        setWorkflow(refreshedWorkflow);
+      } catch (error) {
+        console.error("Failed to refresh booking coordinates", error);
+        setLocationRefreshError(
+          error instanceof Error
+            ? error.message
+            : "Map coordinates could not be refreshed right now.",
+        );
+      } finally {
+        setIsRefreshingLocation(false);
+      }
+    },
+    [isRefreshingLocation, reference, workflow],
+  );
 
   useEffect(() => {
     if (!workflow || isRefreshingLocation || hasAttemptedLocationRefresh) {
@@ -117,45 +158,12 @@ function MechanicJobOverviewPage({
     }
 
     void handleRefreshLocation(true);
-  }, [workflow, reference, isRefreshingLocation, hasAttemptedLocationRefresh]);
-
-  const handleRefreshLocation = async (markAttempted = false) => {
-    if (!workflow || isRefreshingLocation) {
-      return;
-    }
-
-    try {
-      setIsRefreshingLocation(true);
-      setLocationRefreshError(null);
-
-      if (markAttempted) {
-        setHasAttemptedLocationRefresh(true);
-      }
-
-      const ensuredCoordinates = await ensureBookingCoordinates(
-        workflow.booking.id,
-      );
-
-      if (ensuredCoordinates.source === "missing") {
-        setLocationRefreshError(
-          "Coordinates could not be generated from this address yet. Check the address or try again later.",
-        );
-        return;
-      }
-
-      const refreshedWorkflow = await fetchJobWorkflowOverview(reference);
-      setWorkflow(refreshedWorkflow);
-    } catch (error) {
-      console.error("Failed to refresh booking coordinates", error);
-      setLocationRefreshError(
-        error instanceof Error
-          ? error.message
-          : "Map coordinates could not be refreshed right now.",
-      );
-    } finally {
-      setIsRefreshingLocation(false);
-    }
-  };
+  }, [
+    handleRefreshLocation,
+    hasAttemptedLocationRefresh,
+    isRefreshingLocation,
+    workflow,
+  ]);
 
   const availableCheckInPhotos = workflow
     ? checkInPhotoLabels
@@ -259,24 +267,26 @@ function MechanicJobOverviewPage({
         );
   const isJobClosed =
     workflow.job.status === "completed" || workflow.job.status === "cancelled";
+  const isClosedMechanicView = isJobClosed && !isReviewMode;
+  const locationStatus =
+    isReviewMode && isJobClosed ? "in_progress" : workflow.progressStatus;
   const nextStep = workflow.checkIn.isSubmitted ? "checklist" : "checkin";
   const isWorkflowReadOnly = !canStartWorkflow;
-  const startButtonLabel = isWorkflowReadOnly
-    ? "Review only"
-    : isJobClosed
-      ? "Job closed"
-      : "Start";
-  const startHelperText = isWorkflowReadOnly
-    ? "Ops can review the job here, but the guided mechanic workflow stays read-only from this page."
-    : isJobClosed
-    ? "This job is already closed, so the guided workflow is now read-only."
-    : workflow.checkIn.isSubmitted
-      ? "Check-in has already been submitted. Start will continue straight to the service checklist."
-      : "Start opens the vehicle check-in first. Once that is submitted, the next step becomes the service checklist.";
   const canRetryLocationRefresh =
-    canViewJobLocation(workflow.progressStatus) &&
+    canViewJobLocation(locationStatus) &&
     workflow.location.latitude === null &&
     workflow.location.longitude === null;
+  const vehicleSummary =
+    workflow.job.vehicle_summary_snapshot ||
+    [
+      workflow.booking.make,
+      workflow.booking.model,
+      workflow.booking.engine,
+      workflow.booking.fuel,
+      workflow.booking.year,
+    ]
+      .filter(Boolean)
+      .join(" ");
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.08),_transparent_28%),linear-gradient(180deg,_#f8fafc_0%,_#edf4f1_100%)] px-4 py-6 sm:px-6 sm:py-8">
@@ -381,74 +391,94 @@ function MechanicJobOverviewPage({
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
-                    Customer + Vehicle
+                    {isClosedMechanicView ? "Completed Record" : "Customer + Vehicle"}
                   </p>
                   <h2 className="mt-1 text-xl font-semibold text-slate-950">
-                    {workflow.booking.full_name}
+                    {isClosedMechanicView
+                      ? workflow.booking.car_registration
+                      : workflow.booking.full_name || "Customer"}
                   </h2>
                 </div>
               </div>
 
-              <div className="mt-6 space-y-4 text-sm text-slate-700">
-                <div className="flex items-start gap-3">
-                  <Phone className="mt-0.5 h-4 w-4 text-slate-500" />
-                  <span>{workflow.booking.phone}</span>
+              {isClosedMechanicView ? (
+                <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+                  <div className="flex items-start gap-3">
+                    <ShieldCheck className="mt-0.5 h-4 w-4 text-slate-500" />
+                    <div>
+                      <p className="font-semibold text-slate-900">
+                        Customer details archived after completion
+                      </p>
+                      <p className="mt-1">
+                        Contact details, address, and submitted images are only
+                        available to ops and admin once the job is completed.
+                      </p>
+                    </div>
+                  </div>
+                  {vehicleSummary ? (
+                    <p className="mt-4 text-sm text-slate-600">
+                      Vehicle summary: {vehicleSummary}
+                    </p>
+                  ) : null}
                 </div>
-                <div className="flex items-start gap-3">
-                  <CarFront className="mt-0.5 h-4 w-4 text-slate-500" />
-                  <span>
-                    {workflow.booking.car_registration}
-                    {workflow.booking.make ||
-                    workflow.booking.model ||
-                    workflow.booking.year
-                      ? ` - ${[
-                          workflow.booking.make,
-                          workflow.booking.model,
-                          workflow.booking.engine,
-                          workflow.booking.fuel,
-                          workflow.booking.year,
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}`
-                      : ""}
-                  </span>
+              ) : (
+                <div className="mt-6 space-y-4 text-sm text-slate-700">
+                  <div className="flex items-start gap-3">
+                    <Phone className="mt-0.5 h-4 w-4 text-slate-500" />
+                    <span>{workflow.booking.phone}</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CarFront className="mt-0.5 h-4 w-4 text-slate-500" />
+                    <span>
+                      {workflow.booking.car_registration}
+                      {vehicleSummary ? ` - ${vehicleSummary}` : ""}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
-            <div className="space-y-3">
-              <MechanicLocationCard
-                location={workflow.location}
-                status={workflow.progressStatus}
-                isRefreshing={isRefreshingLocation}
-              />
-              {canRetryLocationRefresh ? (
-                <div className="rounded-3xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.45)]">
-                  {locationRefreshError ? (
-                    <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                      <p>{locationRefreshError}</p>
-                    </div>
-                  ) : (
-                    <p className="text-slate-600">
-                      Map coordinates are still missing for this address. You
-                      can try refreshing the location again.
-                    </p>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => void handleRefreshLocation()}
-                    disabled={isRefreshingLocation}
-                    className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <LoaderCircle
-                      className={isRefreshingLocation ? "h-4 w-4 animate-spin" : "hidden"}
-                    />
-                    {isRefreshingLocation ? "Refreshing map..." : "Retry map location"}
-                  </button>
-                </div>
-              ) : null}
-            </div>
+            {!isClosedMechanicView ? (
+              <div className="space-y-3">
+                <MechanicLocationCard
+                  location={workflow.location}
+                  status={locationStatus}
+                  isRefreshing={isRefreshingLocation}
+                />
+                {canRetryLocationRefresh ? (
+                  <div className="rounded-3xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.45)]">
+                    {locationRefreshError ? (
+                      <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                        <p>{locationRefreshError}</p>
+                      </div>
+                    ) : (
+                      <p className="text-slate-600">
+                        Map coordinates are still missing for this address. You
+                        can try refreshing the location again.
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => void handleRefreshLocation()}
+                      disabled={isRefreshingLocation}
+                      className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <LoaderCircle
+                        className={
+                          isRefreshingLocation
+                            ? "h-4 w-4 animate-spin"
+                            : "hidden"
+                        }
+                      />
+                      {isRefreshingLocation
+                        ? "Refreshing map..."
+                        : "Retry map location"}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </section>
 
           <section className="space-y-5">
@@ -513,51 +543,57 @@ function MechanicJobOverviewPage({
               </div>
             </div>
 
-            <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.45)] sm:p-6">
-              <div className="flex items-start gap-4">
-                <div className="rounded-2xl bg-violet-50 p-3 text-violet-700">
-                  <NotebookPen className="h-5 w-5" />
+            {isReviewMode ? null : (
+              <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.45)] sm:p-6">
+                <div className="flex items-start gap-4">
+                  <div className="rounded-2xl bg-violet-50 p-3 text-violet-700">
+                    <NotebookPen className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-700">
+                      Guided Workflow
+                    </p>
+                    <h2 className="mt-1 text-xl font-semibold text-slate-950">
+                      Start the service
+                    </h2>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-700">
-                    Guided Workflow
-                  </p>
-                  <h2 className="mt-1 text-xl font-semibold text-slate-950">
-                    Start the service
-                  </h2>
-                </div>
-              </div>
 
-              <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
-                <p>{startHelperText}</p>
-                {workflow.job.ops_notes?.trim() ? (
-                  <p className="mt-3 border-t border-slate-200 pt-3">
-                    Ops note: {workflow.job.ops_notes}
+                <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+                  <p>
+                    {isJobClosed
+                      ? "This job is already closed, so the guided workflow is now read-only."
+                      : workflow.checkIn.isSubmitted
+                        ? "Check-in has already been submitted. Start will continue straight to the service checklist."
+                        : "Start opens the vehicle check-in first. Once that is submitted, the next step becomes the service checklist."}
                   </p>
-                ) : null}
-              </div>
-
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <button
-                  type="button"
-                  onClick={() => onStart?.(nextStep)}
-                  disabled={isJobClosed || isWorkflowReadOnly}
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
-                >
-                  {startButtonLabel}
-                  {!isJobClosed && !isWorkflowReadOnly ? (
-                    <ChevronRight className="h-4 w-4" />
+                  {workflow.job.ops_notes?.trim() ? (
+                    <p className="mt-3 border-t border-slate-200 pt-3">
+                      Ops note: {workflow.job.ops_notes}
+                    </p>
                   ) : null}
-                </button>
-                <p className="text-xs text-slate-500">
-                  {isWorkflowReadOnly
-                    ? "Review mode only"
-                    : workflow.checkIn.isSubmitted
-                    ? "Next step: Service Checklist"
-                    : "Next step: Vehicle Check-In"}
-                </p>
+                </div>
+
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <button
+                    type="button"
+                    onClick={() => onStart?.(nextStep)}
+                    disabled={isJobClosed || isWorkflowReadOnly}
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                  >
+                    {isJobClosed ? "Job closed" : "Start"}
+                    {!isJobClosed && !isWorkflowReadOnly ? (
+                      <ChevronRight className="h-4 w-4" />
+                    ) : null}
+                  </button>
+                  <p className="text-xs text-slate-500">
+                    {workflow.checkIn.isSubmitted
+                      ? "Next step: Service Checklist"
+                      : "Next step: Vehicle Check-In"}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.45)] sm:p-6">
               <div className="flex items-start gap-4">
@@ -598,6 +634,12 @@ function MechanicJobOverviewPage({
                         Vehicle condition
                       </p>
                       <p className="mt-2 font-semibold text-slate-900">
+                        Meter reading:{" "}
+                        {workflow.checkIn.odometerReading !== null
+                          ? workflow.checkIn.odometerReading
+                          : "Not set"}
+                      </p>
+                      <p className="mt-2 font-semibold text-slate-900">
                         Damage:{" "}
                         {workflow.checkIn.visibleDamage === null
                           ? "Not set"
@@ -616,7 +658,7 @@ function MechanicJobOverviewPage({
                     </div>
                   </div>
 
-                  {workflow.checkIn.notes?.trim() ? (
+                  {!isClosedMechanicView && workflow.checkIn.notes?.trim() ? (
                     <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
                       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
                         Check-In Notes
@@ -625,52 +667,59 @@ function MechanicJobOverviewPage({
                     </div>
                   ) : null}
 
-                  <div className="mt-5 grid gap-4 min-[460px]:grid-cols-2 xl:grid-cols-3">
-                    {checkInPhotoLabels.map((photo) => {
-                      const photoUrl = workflow.checkIn.photos[photo.key];
+                  {isClosedMechanicView ? (
+                    <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+                      Submitted arrival images are archived after completion and
+                      can only be reviewed by ops or admin.
+                    </div>
+                  ) : (
+                    <div className="mt-5 grid gap-4 min-[460px]:grid-cols-2 xl:grid-cols-3">
+                      {checkInPhotoLabels.map((photo) => {
+                        const photoUrl = workflow.checkIn.photos[photo.key];
 
-                      return (
-                        <div
-                          key={photo.key}
-                          className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-50"
-                        >
-                          <div className="border-b border-slate-200 px-4 py-3">
-                            <p className="text-sm font-semibold text-slate-900">
-                              {photo.label}
-                            </p>
-                          </div>
-                          {photoUrl ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setActivePhotoIndex(
-                                  availableCheckInPhotos.findIndex(
-                                    (availablePhoto) =>
-                                      availablePhoto.label === photo.label &&
-                                      availablePhoto.url === photoUrl,
-                                  ),
-                                )
-                              }
-                              className="block w-full"
-                            >
-                              <img
-                                src={photoUrl}
-                                alt={`${photo.label} check-in`}
-                                className="aspect-[4/3] w-full object-cover transition hover:opacity-95"
-                              />
-                              <span className="block border-t border-slate-200 bg-white px-4 py-2 text-left text-xs font-medium text-slate-500">
-                                Tap to open
-                              </span>
-                            </button>
-                          ) : (
-                            <div className="flex aspect-[4/3] items-center justify-center px-4 text-center text-sm text-slate-500">
-                              Photo not available
+                        return (
+                          <div
+                            key={photo.key}
+                            className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-50"
+                          >
+                            <div className="border-b border-slate-200 px-4 py-3">
+                              <p className="text-sm font-semibold text-slate-900">
+                                {photo.label}
+                              </p>
                             </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                            {photoUrl ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setActivePhotoIndex(
+                                    availableCheckInPhotos.findIndex(
+                                      (availablePhoto) =>
+                                        availablePhoto.label === photo.label &&
+                                        availablePhoto.url === photoUrl,
+                                    ),
+                                  )
+                                }
+                                className="block w-full"
+                              >
+                                <img
+                                  src={photoUrl}
+                                  alt={`${photo.label} check-in`}
+                                  className="aspect-[4/3] w-full object-cover transition hover:opacity-95"
+                                />
+                                <span className="block border-t border-slate-200 bg-white px-4 py-2 text-left text-xs font-medium text-slate-500">
+                                  Tap to open
+                                </span>
+                              </button>
+                            ) : (
+                              <div className="flex aspect-[4/3] items-center justify-center px-4 text-center text-sm text-slate-500">
+                                Photo not available
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="mt-5 rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">

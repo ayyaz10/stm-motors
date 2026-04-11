@@ -51,6 +51,7 @@ using (
     join public.jobs j on j.id = js.job_id
     where js.id = public.job_service_checklist_items.job_service_id
       and j.assigned_mechanic_user_id = auth.uid()
+      and j.status not in ('completed', 'cancelled')
   )
 )
 with check (
@@ -60,6 +61,7 @@ with check (
     join public.jobs j on j.id = js.job_id
     where js.id = public.job_service_checklist_items.job_service_id
       and j.assigned_mechanic_user_id = auth.uid()
+      and j.status not in ('completed', 'cancelled')
   )
 );
 
@@ -74,5 +76,6 @@ using (
     from public.jobs j
     where j.id::text = public.vehicle_check_ins.job_id
       and j.assigned_mechanic_user_id = auth.uid()
+      and j.status not in ('completed', 'cancelled')
   )
 );

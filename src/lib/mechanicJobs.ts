@@ -10,11 +10,11 @@ export interface MechanicDashboardJob {
   booking: {
     id: string;
     booking_number: string;
-    full_name: string;
-    phone: string;
+    full_name: string | null;
+    phone: string | null;
     car_registration: string;
-    city: string;
-    postcode: string;
+    city: string | null;
+    postcode: string | null;
   };
   checklistTotals: {
     total: number;
@@ -34,7 +34,7 @@ export async function fetchMechanicDashboardJobs(
   const { data: jobsData, error: jobsError } = await supabase
     .from("jobs")
     .select(
-      "id, booking_id, job_reference, status, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, ops_notes, created_at, updated_at",
+      "id, booking_id, job_reference, status, booking_number_snapshot, car_registration_snapshot, vehicle_summary_snapshot, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, ops_notes, created_at, updated_at",
     )
     .eq("assigned_mechanic_user_id", mechanicUserId)
     .order("created_at", { ascending: false });
@@ -150,10 +150,6 @@ export async function fetchMechanicDashboardJobs(
     .map((job) => {
       const booking = bookingsById.get(job.booking_id);
 
-      if (!booking) {
-        return null;
-      }
-
       const checklistTotals = checklistTotalsByJobId.get(job.id) ?? {
         total: 0,
         completed: 0,
@@ -163,13 +159,15 @@ export async function fetchMechanicDashboardJobs(
       return {
         job,
         booking: {
-          id: booking.id,
-          booking_number: booking.booking_number,
-          full_name: booking.full_name,
-          phone: booking.phone,
-          car_registration: booking.car_registration,
-          city: booking.city,
-          postcode: booking.postcode,
+          id: booking?.id ?? job.booking_id,
+          booking_number:
+            booking?.booking_number ?? job.booking_number_snapshot ?? "Booking",
+          full_name: booking?.full_name ?? null,
+          phone: booking?.phone ?? null,
+          car_registration:
+            booking?.car_registration ?? job.car_registration_snapshot ?? "Vehicle",
+          city: booking?.city ?? null,
+          postcode: booking?.postcode ?? null,
         },
         checklistTotals,
         checkIn: {

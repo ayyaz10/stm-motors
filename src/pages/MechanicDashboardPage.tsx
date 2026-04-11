@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import {
   CalendarDays,
@@ -101,7 +101,7 @@ function MechanicDashboardPage({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [jobTab, setJobTab] = useState<"active" | "completed">("active");
 
-  const loadJobs = async () => {
+  const loadJobs = useCallback(async () => {
     try {
       setIsLoading(true);
       setLoadError(null);
@@ -118,11 +118,11 @@ function MechanicDashboardPage({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [mechanicUserId]);
 
   useEffect(() => {
     void loadJobs();
-  }, [mechanicUserId]);
+  }, [loadJobs]);
 
   const activeJobs = useMemo(
     () =>
@@ -271,6 +271,9 @@ function MechanicDashboardPage({
             <div className="space-y-4">
               {tabItems.map((item) => {
                 const meta = statusMeta[item.progressStatus];
+                const isClosedJob =
+                  item.progressStatus === "completed" ||
+                  item.progressStatus === "cancelled";
                 const checklistPercent =
                   item.checklistTotals.total === 0
                     ? 0
@@ -306,12 +309,22 @@ function MechanicDashboardPage({
 
                         <div>
                           <p className="text-base font-semibold text-slate-950">
-                            {item.booking.full_name} -{" "}
-                            {item.booking.car_registration}
+                            {isClosedJob
+                              ? item.booking.car_registration
+                              : `${item.booking.full_name ?? "Customer"} - ${item.booking.car_registration}`}
                           </p>
-                          <p className="mt-1 text-sm text-slate-600">
-                            {item.booking.city}, {item.booking.postcode}
-                          </p>
+                          {isClosedJob ? (
+                            <p className="mt-1 text-sm text-slate-600">
+                              {item.job.vehicle_summary_snapshot ||
+                                "Customer contact details and submitted images are hidden after completion."}
+                            </p>
+                          ) : (
+                            <p className="mt-1 text-sm text-slate-600">
+                              {[item.booking.city, item.booking.postcode]
+                                .filter(Boolean)
+                                .join(", ")}
+                            </p>
+                          )}
                           <p className="mt-1 text-xs text-slate-500">
                             {meta.helperText}
                           </p>

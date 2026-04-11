@@ -18,6 +18,7 @@ import {
 import { compressImageForUpload } from "../utils/imageCompression";
 import {
   hasVehicleCheckInValidationErrors,
+  parseOdometerReading,
   validateVehicleCheckInForm,
   type VehicleCheckInPhotoType,
   type VehicleCheckInValidationErrors,
@@ -116,6 +117,7 @@ const EMPTY_PHOTO_SELECTIONS: PhotoSelections = {
 };
 
 const EMPTY_ERRORS: VehicleCheckInValidationErrors = {
+  odometerReading: undefined,
   photos: {},
 };
 
@@ -206,6 +208,7 @@ function VehicleCheckInPage({
   onOpenOverview,
   onOpenDashboard,
 }: VehicleCheckInPageProps) {
+  const [odometerReading, setOdometerReading] = useState("");
   const [visibleDamage, setVisibleDamage] = useState<YesNoValue>(null);
   const [warningLights, setWarningLights] = useState<YesNoValue>(null);
   const [notes, setNotes] = useState("");
@@ -291,6 +294,11 @@ function VehicleCheckInPage({
             id: workflow.checkIn.id,
             submittedAt: workflow.checkIn.submittedAt,
           });
+          setOdometerReading(
+            workflow.checkIn.odometerReading !== null
+              ? String(workflow.checkIn.odometerReading)
+              : "",
+          );
           setVisibleDamage(workflow.checkIn.visibleDamage);
           setWarningLights(workflow.checkIn.warningLights);
           setNotes(workflow.checkIn.notes ?? "");
@@ -350,6 +358,7 @@ function VehicleCheckInPage({
         }
 
         setExistingCheckIn(null);
+        setOdometerReading("");
         setVisibleDamage(null);
         setWarningLights(null);
         setNotes("");
@@ -435,6 +444,7 @@ function VehicleCheckInPage({
     }
 
     const validationErrors = validateVehicleCheckInForm({
+      odometerReading,
       photos: {
         odometer: Boolean(photos.odometer),
         front: Boolean(photos.front),
@@ -447,7 +457,16 @@ function VehicleCheckInPage({
     setErrors(validationErrors);
 
     if (hasVehicleCheckInValidationErrors(validationErrors)) {
-      setSubmitError("Complete all required photos before submitting.");
+      setSubmitError(
+        "Complete the meter reading and all required photos before submitting.",
+      );
+      return;
+    }
+
+    const parsedOdometerReading = parseOdometerReading(odometerReading);
+
+    if (parsedOdometerReading === null) {
+      setSubmitError("Enter a valid meter reading before submitting.");
       return;
     }
 
@@ -516,6 +535,7 @@ function VehicleCheckInPage({
         job_id: resolvedJobId,
         mechanic_name: resolvedMechanicName,
         mechanic_phone: null,
+        odometer_reading: parsedOdometerReading,
         visible_damage: visibleDamage,
         warning_lights: warningLights,
         notes: notes.trim() || null,
@@ -818,12 +838,69 @@ function VehicleCheckInPage({
 
           <section className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.5)] sm:p-6">
             <div className="mb-5 flex items-start gap-4">
+              <div className="rounded-2xl bg-indigo-50 p-3 text-indigo-700">
+                <Gauge className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-700">
+                  Section B
+                </p>
+                <h2 className="mt-1 text-xl font-semibold text-slate-950">
+                  Meter Reading
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Enter the current odometer reading shown on the dashboard.
+                  This gives the team a numeric service-history record alongside
+                  the photo proof.
+                </p>
+              </div>
+            </div>
+
+            <label className="space-y-2">
+              <span className="text-sm font-semibold text-slate-900">
+                Odometer reading
+              </span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={odometerReading}
+                onChange={(event) => {
+                  setOdometerReading(event.target.value);
+                  setErrors((currentErrors) => ({
+                    ...currentErrors,
+                    odometerReading: undefined,
+                  }));
+                  setSubmitError(null);
+                }}
+                placeholder="Enter current mileage"
+                disabled={isReadOnlyMode}
+                className={clsx(
+                  "w-full rounded-2xl border bg-slate-50 px-4 py-3 text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-sky-100",
+                  errors.odometerReading
+                    ? "border-rose-300 focus:border-rose-400"
+                    : "border-slate-200 focus:border-sky-400",
+                )}
+              />
+              <p className="text-xs text-slate-500">
+                Numbers only, for example `45231`.
+              </p>
+              {errors.odometerReading ? (
+                <p className="flex items-center gap-2 text-sm text-rose-600">
+                  <AlertCircle className="h-4 w-4" />
+                  {errors.odometerReading}
+                </p>
+              ) : null}
+            </label>
+          </section>
+
+          <section className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.5)] sm:p-6">
+            <div className="mb-5 flex items-start gap-4">
               <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-700">
                 <Camera className="h-5 w-5" />
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                  Section B
+                  Section C
                 </p>
                 <h2 className="mt-1 text-xl font-semibold text-slate-950">
                   Required Photos
@@ -998,7 +1075,7 @@ function VehicleCheckInPage({
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
-                  Section C
+                  Section D
                 </p>
                 <h2 className="mt-1 text-xl font-semibold text-slate-950">
                   Vehicle Condition

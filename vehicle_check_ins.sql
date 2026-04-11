@@ -10,6 +10,7 @@ create table if not exists public.vehicle_check_ins (
   job_id text,
   mechanic_name text not null,
   mechanic_phone text,
+  odometer_reading bigint,
   visible_damage boolean,
   warning_lights boolean,
   notes text,
@@ -32,3 +33,6 @@ create unique index if not exists vehicle_check_ins_job_id_unique_idx
   where job_id is not null;
 
 alter table public.vehicle_check_ins enable row level security;
+
+alter table public.vehicle_check_ins
+  add column if not exists odometer_reading bigint;

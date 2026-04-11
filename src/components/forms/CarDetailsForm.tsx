@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import Select from "react-select";
+import Select, {
+  type SingleValue,
+  type StylesConfig,
+} from "react-select";
 import {
   fetchVehicleMakes,
   fetchVehicleMetadataForModels,
@@ -57,8 +60,8 @@ const TOP_MAKES = [
 const LEGACY_MAKES_CACHE_KEY = "vehicle_makes_cache_v1";
 const LEGACY_MODELS_CACHE_PREFIX = "vehicle_models_cache_v1_";
 
-const selectStyles = {
-  control: (base: any, state: any) => ({
+const selectStyles: StylesConfig<SelectOption, false> = {
+  control: (base, state) => ({
     ...base,
     minHeight: "42px",
     borderColor: state.isFocused ? "#d97706" : "#d97706",
@@ -67,7 +70,7 @@ const selectStyles = {
       borderColor: "#d97706",
     },
   }),
-  option: (base: any, state: any) => ({
+  option: (base, state) => ({
     ...base,
     backgroundColor: state.isSelected
       ? "#22c55e"
@@ -77,11 +80,11 @@ const selectStyles = {
     color: state.isSelected ? "white" : "#111827",
     cursor: "pointer",
   }),
-  placeholder: (base: any) => ({
+  placeholder: (base) => ({
     ...base,
     color: "#6b7280",
   }),
-  menu: (base: any) => ({
+  menu: (base) => ({
     ...base,
     zIndex: 30,
   }),
@@ -502,7 +505,7 @@ const CarDetailsForm = ({
     return isValid;
   };
 
-  const handleMakeChange = (selectedOption: SelectOption | null) => {
+  const handleMakeChange = (selectedOption: SingleValue<SelectOption>) => {
     const value = selectedOption?.value || "";
 
     setFormData((prev) => ({
@@ -522,7 +525,7 @@ const CarDetailsForm = ({
     setDisabled("year", true);
   };
 
-  const handleModelChange = (selectedOption: SelectOption | null) => {
+  const handleModelChange = (selectedOption: SingleValue<SelectOption>) => {
     const value = selectedOption?.value || "";
 
     setFormData((prev) => ({
@@ -538,7 +541,7 @@ const CarDetailsForm = ({
     setDisabled("year", true);
   };
 
-  const handleFuelChange = (selectedOption: SelectOption | null) => {
+  const handleFuelChange = (selectedOption: SingleValue<SelectOption>) => {
     const value = selectedOption?.value || "";
     const isElectric = isPureElectricFuel(value);
     const requiresEngineSelection = !isElectric && engineOptions.length > 0;
@@ -554,7 +557,7 @@ const CarDetailsForm = ({
     setDisabled("year", !value ? true : requiresEngineSelection);
   };
 
-  const handleEngineChange = (selectedOption: SelectOption | null) => {
+  const handleEngineChange = (selectedOption: SingleValue<SelectOption>) => {
     const value = selectedOption?.value || "";
 
     setFormData((prev) => ({
@@ -566,7 +569,7 @@ const CarDetailsForm = ({
     setDisabled("year", !value);
   };
 
-  const handleYearChange = (selectedOption: SelectOption | null) => {
+  const handleYearChange = (selectedOption: SingleValue<SelectOption>) => {
     const value = selectedOption?.value || "";
 
     setFormData((prev) => ({

@@ -56,6 +56,9 @@ create table if not exists public.jobs (
   booking_id uuid not null references public.bookings(id) on delete cascade,
   job_reference text not null default public.generate_job_reference(),
   status text not null default 'unassigned',
+  booking_number_snapshot text,
+  car_registration_snapshot text,
+  vehicle_summary_snapshot text,
   assigned_mechanic_name text,
   assigned_mechanic_phone text,
   scheduled_for timestamptz,
@@ -65,6 +68,35 @@ create table if not exists public.jobs (
     status in ('unassigned', 'assigned', 'scheduled', 'in_progress', 'completed', 'cancelled')
   )
 );
+
+alter table public.jobs
+  add column if not exists booking_number_snapshot text;
+
+alter table public.jobs
+  add column if not exists car_registration_snapshot text;
+
+alter table public.jobs
+  add column if not exists vehicle_summary_snapshot text;
+
+update public.jobs
+set
+  booking_number_snapshot = coalesce(public.jobs.booking_number_snapshot, bookings.booking_number),
+  car_registration_snapshot = coalesce(public.jobs.car_registration_snapshot, bookings.car_registration),
+  vehicle_summary_snapshot = coalesce(
+    public.jobs.vehicle_summary_snapshot,
+    trim(
+      concat_ws(
+        ' ',
+        bookings.make,
+        bookings.model,
+        bookings.engine,
+        bookings.fuel,
+        bookings.year
+      )
+    )
+  )
+from public.bookings
+where bookings.id = public.jobs.booking_id;
 
 create unique index if not exists jobs_job_reference_key
   on public.jobs (job_reference);

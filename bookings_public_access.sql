@@ -176,5 +176,6 @@ using (
     from public.jobs j
     where j.booking_id = public.bookings.id
       and j.assigned_mechanic_user_id = auth.uid()
+      and j.status not in ('completed', 'cancelled')
   )
 );

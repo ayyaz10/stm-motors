@@ -37,6 +37,9 @@ export interface CreatedJob {
   booking_id: string;
   job_reference: string;
   status: JobStatus;
+  booking_number_snapshot: string | null;
+  car_registration_snapshot: string | null;
+  vehicle_summary_snapshot: string | null;
   assigned_mechanic_user_id: string | null;
   assigned_mechanic_name: string | null;
   assigned_mechanic_phone: string | null;
@@ -66,15 +69,50 @@ export interface BookingAssignmentCandidate {
   existing_job: AssignmentCandidateJob | null;
 }
 
+function buildVehicleSummarySnapshot(booking: {
+  make: string | null;
+  model: string | null;
+  engine: string | null;
+  fuel: string | null;
+  year: string | null;
+}): string | null {
+  const parts = [
+    booking.make,
+    booking.model,
+    booking.engine,
+    booking.fuel,
+    booking.year,
+  ]
+    .map((part) => part?.trim())
+    .filter((part): part is string => Boolean(part));
+
+  return parts.length > 0 ? parts.join(" ") : null;
+}
+
 export async function createJob(
   payload: CreateJobPayload,
 ): Promise<CreatedJob> {
+  const { data: bookingSnapshot, error: bookingSnapshotError } = await supabase
+    .from("bookings")
+    .select("booking_number, car_registration, make, model, engine, fuel, year")
+    .eq("id", payload.booking_id)
+    .single();
+
+  if (bookingSnapshotError) {
+    throw new Error(
+      bookingSnapshotError.message || "Failed to load booking snapshot details.",
+    );
+  }
+
   const { data, error } = await supabase
     .from("jobs")
     .insert([
       {
         booking_id: payload.booking_id,
         status: payload.status ?? "assigned",
+        booking_number_snapshot: bookingSnapshot.booking_number,
+        car_registration_snapshot: bookingSnapshot.car_registration,
+        vehicle_summary_snapshot: buildVehicleSummarySnapshot(bookingSnapshot),
         assigned_mechanic_user_id: payload.assigned_mechanic_user_id ?? null,
         assigned_mechanic_name: payload.assigned_mechanic_name ?? null,
         assigned_mechanic_phone: payload.assigned_mechanic_phone ?? null,
@@ -255,7 +293,7 @@ export async function fetchBookingAssignmentCandidates(): Promise<
   const { data: jobs, error: jobsError } = await supabase
     .from("jobs")
     .select(
-      "id, booking_id, job_reference, status, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, ops_notes, created_at, updated_at",
+      "id, booking_id, job_reference, status, booking_number_snapshot, car_registration_snapshot, vehicle_summary_snapshot, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, ops_notes, created_at, updated_at",
     )
     .in("booking_id", bookingIds)
     .order("created_at", { ascending: false });

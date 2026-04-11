@@ -78,13 +78,13 @@ export interface JobServiceSnapshot {
 export interface JobWorkflowBooking {
   id: string;
   booking_number: string;
-  full_name: string;
-  phone: string;
-  email: string;
-  street_address_1: string;
+  full_name: string | null;
+  phone: string | null;
+  email: string | null;
+  street_address_1: string | null;
   street_address_2: string | null;
-  city: string;
-  postcode: string;
+  city: string | null;
+  postcode: string | null;
   car_registration: string;
   make: string | null;
   model: string | null;
@@ -113,6 +113,7 @@ export interface JobWorkflowOverview {
     isSubmitted: boolean;
     submittedAt: string | null;
     submittedBy: string | null;
+    odometerReading: number | null;
     notes: string | null;
     visibleDamage: boolean | null;
     warningLights: boolean | null;
@@ -272,7 +273,7 @@ async function fetchJobByReference(reference: string): Promise<CreatedJob> {
   const baseQuery = supabase
     .from("jobs")
     .select(
-      "id, booking_id, job_reference, status, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, ops_notes, created_at, updated_at",
+      "id, booking_id, job_reference, status, booking_number_snapshot, car_registration_snapshot, vehicle_summary_snapshot, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, ops_notes, created_at, updated_at",
     );
 
   if (isUuid(reference)) {
@@ -290,7 +291,7 @@ async function fetchJobByReference(reference: string): Promise<CreatedJob> {
   const { data, error } = await supabase
     .from("jobs")
     .select(
-      "id, booking_id, job_reference, status, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, ops_notes, created_at, updated_at",
+      "id, booking_id, job_reference, status, booking_number_snapshot, car_registration_snapshot, vehicle_summary_snapshot, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, ops_notes, created_at, updated_at",
     )
     .eq("job_reference", reference)
     .maybeSingle();
@@ -317,16 +318,20 @@ export async function fetchJobWorkflowOverview(
       "id, booking_number, full_name, phone, email, street_address_1, street_address_2, city, postcode, car_registration, make, model, fuel, engine, year, latitude, longitude, selected_services, total_price, created_at",
     )
     .eq("id", job.booking_id)
-    .single();
+    .maybeSingle();
 
   if (bookingError) {
     throw new Error(bookingError.message || "Failed to load booking details.");
   }
 
+  if (!bookingData && job.status !== "completed" && job.status !== "cancelled") {
+    throw new Error("Failed to load booking details.");
+  }
+
   const { data: checkInData, error: checkInError } = await supabase
     .from("vehicle_check_ins")
     .select(
-      "id, mechanic_name, visible_damage, warning_lights, notes, odometer_photo_path, front_photo_path, rear_photo_path, left_photo_path, right_photo_path, submitted_at",
+      "id, mechanic_name, odometer_reading, visible_damage, warning_lights, notes, odometer_photo_path, front_photo_path, rear_photo_path, left_photo_path, right_photo_path, submitted_at",
     )
     .eq("job_id", job.id)
     .order("submitted_at", { ascending: false })
@@ -436,61 +441,88 @@ export async function fetchJobWorkflowOverview(
     totalChecklistItems,
   );
 
+  const resolvedBooking: JobWorkflowBooking = bookingData
+    ? {
+        id: bookingData.id,
+        booking_number: bookingData.booking_number,
+        full_name: bookingData.full_name,
+        phone: bookingData.phone,
+        email: bookingData.email,
+        street_address_1: bookingData.street_address_1,
+        street_address_2: bookingData.street_address_2,
+        city: bookingData.city,
+        postcode: bookingData.postcode,
+        car_registration: bookingData.car_registration,
+        make: bookingData.make,
+        model: bookingData.model,
+        fuel: bookingData.fuel,
+        engine: bookingData.engine,
+        year: bookingData.year,
+        latitude:
+          typeof bookingData.latitude === "number"
+            ? bookingData.latitude
+            : Number(bookingData.latitude) || null,
+        longitude:
+          typeof bookingData.longitude === "number"
+            ? bookingData.longitude
+            : Number(bookingData.longitude) || null,
+        selected_services: bookingData.selected_services,
+        total_price: Number(bookingData.total_price),
+        created_at: bookingData.created_at,
+      }
+    : {
+        id: job.booking_id,
+        booking_number: job.booking_number_snapshot ?? "Booking hidden",
+        full_name: null,
+        phone: null,
+        email: null,
+        street_address_1: null,
+        street_address_2: null,
+        city: null,
+        postcode: null,
+        car_registration: job.car_registration_snapshot ?? "Vehicle",
+        make: null,
+        model: null,
+        fuel: null,
+        engine: null,
+        year: null,
+        latitude: null,
+        longitude: null,
+        selected_services: [],
+        total_price: 0,
+        created_at: job.created_at,
+      };
+
+  const resolvedLocation: BookingLocationAddress = {
+    street_address_1: resolvedBooking.street_address_1 ?? "",
+    street_address_2: resolvedBooking.street_address_2,
+    city: resolvedBooking.city ?? "",
+    postcode: resolvedBooking.postcode ?? "",
+    latitude: resolvedBooking.latitude,
+    longitude: resolvedBooking.longitude,
+  };
+
   return {
     job,
-    booking: {
-      id: bookingData.id,
-      booking_number: bookingData.booking_number,
-      full_name: bookingData.full_name,
-      phone: bookingData.phone,
-      email: bookingData.email,
-      street_address_1: bookingData.street_address_1,
-      street_address_2: bookingData.street_address_2,
-      city: bookingData.city,
-      postcode: bookingData.postcode,
-      car_registration: bookingData.car_registration,
-      make: bookingData.make,
-      model: bookingData.model,
-      fuel: bookingData.fuel,
-      engine: bookingData.engine,
-      year: bookingData.year,
-      latitude:
-        typeof bookingData.latitude === "number"
-          ? bookingData.latitude
-          : Number(bookingData.latitude) || null,
-      longitude:
-        typeof bookingData.longitude === "number"
-          ? bookingData.longitude
-          : Number(bookingData.longitude) || null,
-      selected_services: bookingData.selected_services,
-      total_price: Number(bookingData.total_price),
-      created_at: bookingData.created_at,
-    },
+    booking: resolvedBooking,
     services: mappedServices,
     progressStatus,
     checklistTotals: {
       total: totalChecklistItems,
       completed: completedChecklistItems,
     },
-    location: {
-      street_address_1: bookingData.street_address_1,
-      street_address_2: bookingData.street_address_2,
-      city: bookingData.city,
-      postcode: bookingData.postcode,
-      latitude:
-        typeof bookingData.latitude === "number"
-          ? bookingData.latitude
-          : Number(bookingData.latitude) || null,
-      longitude:
-        typeof bookingData.longitude === "number"
-          ? bookingData.longitude
-          : Number(bookingData.longitude) || null,
-    },
+    location: resolvedLocation,
     checkIn: {
       id: checkInData?.id ?? null,
       isSubmitted: Boolean(checkInData),
       submittedAt: checkInData?.submitted_at ?? null,
       submittedBy: checkInData?.mechanic_name ?? null,
+      odometerReading:
+        typeof checkInData?.odometer_reading === "number"
+          ? checkInData.odometer_reading
+          : checkInData?.odometer_reading
+            ? Number(checkInData.odometer_reading)
+            : null,
       notes: checkInData?.notes ?? null,
       visibleDamage: checkInData?.visible_damage ?? null,
       warningLights: checkInData?.warning_lights ?? null,
@@ -512,7 +544,7 @@ export async function fetchOpsJobProgressBoard(): Promise<
   const { data: jobsData, error: jobsError } = await supabase
     .from("jobs")
     .select(
-      "id, booking_id, job_reference, status, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, ops_notes, created_at, updated_at",
+      "id, booking_id, job_reference, status, booking_number_snapshot, car_registration_snapshot, vehicle_summary_snapshot, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, ops_notes, created_at, updated_at",
     )
     .order("created_at", { ascending: false })
     .limit(100);

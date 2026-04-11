@@ -2,6 +2,9 @@ alter table public.vehicle_check_ins enable row level security;
 alter table public.vehicle_check_ins
 alter column mechanic_phone drop not null;
 
+alter table public.vehicle_check_ins
+add column if not exists odometer_reading bigint;
+
 with ranked_check_ins as (
   select
     id,
@@ -92,6 +95,7 @@ with check (
     from public.jobs j
     where j.id::text = (storage.foldername(name))[1]
       and j.assigned_mechanic_user_id = auth.uid()
+      and j.status not in ('completed', 'cancelled')
   )
 );
 
@@ -108,6 +112,7 @@ using (
       from public.jobs j
       where j.id::text = (storage.foldername(name))[1]
         and j.assigned_mechanic_user_id = auth.uid()
+        and j.status not in ('completed', 'cancelled')
     )
   )
 );
@@ -125,6 +130,7 @@ using (
       from public.jobs j
       where j.id::text = (storage.foldername(name))[1]
         and j.assigned_mechanic_user_id = auth.uid()
+        and j.status not in ('completed', 'cancelled')
     )
   )
 );

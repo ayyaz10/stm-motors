@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import {
   AlertCircle,
@@ -43,7 +43,7 @@ function ServiceChecklistPage({
     [jobId, jobReference],
   );
 
-  const loadWorkflow = async () => {
+  const loadWorkflow = useCallback(async () => {
     if (!reference) {
       setLoadError("No job reference was provided.");
       setIsLoading(false);
@@ -66,11 +66,11 @@ function ServiceChecklistPage({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [reference]);
 
   useEffect(() => {
     void loadWorkflow();
-  }, [reference]);
+  }, [loadWorkflow]);
 
   const handleToggleItem = async (
     itemId: string,
