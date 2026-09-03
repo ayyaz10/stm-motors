@@ -7,35 +7,61 @@ interface CarTabsProps {
   setActiveTab: Dispatch<SetStateAction<string>>;
 }
 
-const CarTabs = ({ activeTab, setActiveTab }: CarTabsProps) => {
+function CarTabs({ activeTab, setActiveTab }: CarTabsProps) {
+  const hasBothTabsEnabled =
+    appSettings.numberPlateEnabled && appSettings.carDetailsEnabled;
+
+  if (!hasBothTabsEnabled) {
+    return null;
+  }
+
   return (
-    <div className="car-selection-tabs-container py-4">
-      <div className="car-selection-tabs flex justify-center">
-        {appSettings.numberPlateEnabled && (
-          <div
+    <div className="rounded-2xl border border-blue-100 bg-blue-50 p-1.5 sm:p-2">
+      <div
+        role="tablist"
+        aria-label="Vehicle entry method"
+        className={clsx("grid gap-2", "grid-cols-2")}
+      >
+        {appSettings.numberPlateEnabled ? (
+          <button
+            id="vehicle-tab-plate"
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "plate"}
+            aria-controls="vehicle-tab-panel"
             className={clsx(
-              "car-numberplate-tab  px-2 py-2 cursor-pointer",
-              activeTab === "plate" && "border border-amber-600",
+              "min-h-[3.25rem] rounded-xl px-4 py-3 text-center text-sm font-semibold transition sm:text-left",
+              activeTab === "plate"
+                ? "bg-[#1c69d4] text-white shadow-sm"
+                : "bg-transparent text-slate-600 hover:bg-white hover:text-[#1c69d4]",
             )}
             onClick={() => setActiveTab("plate")}
           >
-            <h2>Number Plate</h2>
-          </div>
-        )}
-        {appSettings.carDetailsEnabled && (
-          <div
+            Number plate
+          </button>
+        ) : null}
+
+        {appSettings.carDetailsEnabled ? (
+          <button
+            id="vehicle-tab-details"
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "details"}
+            aria-controls="vehicle-tab-panel"
             className={clsx(
-              "car-details-tab px-2 py-2 cursor-pointer",
-              activeTab === "details" && "border border-amber-600",
+              "min-h-[3.25rem] rounded-xl px-4 py-3 text-center text-sm font-semibold transition sm:text-left",
+              activeTab === "details"
+                ? "bg-[#1c69d4] text-white shadow-sm"
+                : "bg-transparent text-slate-600 hover:bg-white hover:text-[#1c69d4]",
             )}
             onClick={() => setActiveTab("details")}
           >
-            <h2>Car Details</h2>
-          </div>
-        )}
+            Manual vehicle details
+          </button>
+        ) : null}
       </div>
     </div>
   );
-};
+}
 
 export default CarTabs;

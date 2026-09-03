@@ -3,6 +3,7 @@
 This file is the quick architecture map for this repo.
 
 Maintenance rule:
+
 - Whenever a new feature is added, changed, or removed, update this file in the same piece of work.
 
 ## App Structure
@@ -10,16 +11,24 @@ Maintenance rule:
 The app is a Vite + React + TypeScript frontend backed by Supabase.
 
 Current user flows:
+
 - Customer booking flow
 - Ops job assignment and progress tracking
 - Mechanic guided workflow: dashboard -> job overview -> vehicle check-in -> service checklist
 
 Main entry points:
+
 - `src/main.tsx`: React bootstrap
 - `src/App.tsx`: lightweight route switch based on `window.location`
 
 Main route/page map:
+
+- `src/pages/HomePage.tsx`: public homepage for STM Motors with hero booking form, service highlights, trust messaging, and UK-wide positioning
+- `src/pages/ServicesPage.tsx`: public services overview focused on oil change and brake pad replacement
+- `src/pages/AboutPage.tsx`: public brand story and premium-placeholder company positioning
+- `src/pages/ContactPage.tsx`: public contact page with support, coverage, and contact detail blocks
 - `src/pages/CarSelectionPage.tsx`: customer booking journey
+  - now lives on the public `/book` route with a premium multi-step booking layout and homepage-prefill support
 - `src/pages/StaffLoginPage.tsx`: staff email/password login page
 - `src/pages/OpsAssignJobPage.tsx`: ops assigns mechanics and creates jobs
   - also handles active job edits for mechanic, schedule, and ops notes
@@ -40,6 +49,7 @@ Main route/page map:
 ## What Each Folder Does
 
 Repo root:
+
 - `src/`: frontend app source
 - `supabase/`: database SQL for vehicle catalog and generated seed files
 - `scripts/`: one-off data generation scripts for vehicle catalog imports
@@ -50,6 +60,7 @@ Repo root:
 - `*.sql` in root: business schema changes and workflow tables for bookings, jobs, and vehicle check-ins
 
 `src/` folders:
+
 - `src/pages/`: page-level screens and route targets
 - `src/components/`: reusable UI pieces and step-based booking UI
 - `src/lib/`: Supabase access and workflow/data modules
@@ -59,16 +70,19 @@ Repo root:
 - `src/assets/`: bundled assets
 
 `src/components/` subfolders:
+
 - `auth/`: small auth UI pieces such as session status
 - `forms/`: booking forms for number plate and car details
 - `Steps/`: booking step content such as work selection, user details, and confirmation
 - `navigation/`: stepper and tab navigation UI
 - `mechanic/`: mechanic-specific UI such as location card/map
+- `public/`: public website branding, logo, layout, and hero booking components
 - `test/`: isolated test/demo components and related tests
 
 ## Where Auth Lives
 
 Current state:
+
 - Database auth foundations now exist in `auth_staff_profiles.sql`.
 - Supabase client setup lives in `src/lib/supabase.ts` and now reads from Vite env vars.
 - Frontend staff session state now loads in `src/App.tsx`.
@@ -78,6 +92,7 @@ Current state:
 - Existing operational SQL policies are still mostly permissive and still need role-based replacement.
 
 Current auth database pieces:
+
 - `public.profiles`: one row per authenticated staff user
 - `public.profiles.role`: `mechanic`, `ops`, or `admin`
 - `public.jobs.assigned_mechanic_user_id`: links a job to the actual mechanic user
@@ -85,12 +100,14 @@ Current auth database pieces:
 - `public.list_mechanics()`: authenticated helper function that returns mechanic ids, names, and emails for ops assignment
 
 Current auth frontend pieces:
+
 - `src/lib/auth.ts`: sign in, sign out, load the current session, load the staff profile, and subscribe to auth changes
 - `src/components/auth/StaffSessionStatus.tsx`: small on-screen session status panel for manual testing
 - `src/App.tsx`: owns app-level staff session, staff profile, loading state, auth errors, route guards, and mechanic login redirect to `/mechanic/jobs`
 - `src/pages/StaffLoginPage.tsx`: simple staff login UI using email and password, plus role-aware next-step guidance
 
 Planned auth location:
+
 - Supabase Auth will be the auth provider.
 - Frontend auth/session helpers should live in `src/lib/` as dedicated auth modules.
 - Route guards should live close to routing, either in `src/App.tsx` or extracted guard components/hooks.
@@ -101,7 +118,10 @@ Planned auth location:
 Most backend calls happen through Supabase inside `src/lib/`.
 
 Core modules:
+
 - `src/lib/auth.ts`: staff sign in/out, session loading, profile loading, and auth state subscriptions
+- `src/lib/navigation.ts`: lightweight browser navigation helper shared across the route-switch app
+- `src/lib/seo.ts`: client-side metadata and structured-data updates for public SEO pages
 - `src/lib/mechanics.ts`: mechanic dropdown data for ops assignment
 - `src/lib/mechanicJobs.ts`: mechanic dashboard job loading and progress summaries
 - `src/lib/supabase.ts`: shared Supabase client
@@ -120,6 +140,7 @@ Core modules:
 - `src/lib/jobProgress.ts`: derived job status helpers
 
 Non-Supabase external API usage:
+
 - `src/lib/bookingLocation.ts` calls OpenStreetMap Nominatim and `postcodes.io` for geocoding
 
 ## Where State Lives
@@ -127,12 +148,15 @@ Non-Supabase external API usage:
 This app currently uses local component state, not a global state library.
 
 State patterns:
+
 - Page-level `useState` drives most screens
 - `useEffect` handles loading, hydration, and sync side effects
 - `useMemo` is used for derived values in complex pages
 
 Examples:
+
 - `src/App.tsx`: owns app-level staff session/profile state, listens for auth changes, and protects role-based routes
+- `src/App.tsx`: now also separates the public marketing/booking website from staff dashboards using a dedicated public layout shell
 - job overview route now allows ops/admin review access while keeping mechanic workflow actions disabled for ops
 - review mode no longer shows the mechanic `Start the service` action card or any extra summary card; ops/admin now review the real job sections directly
   - check-in and checklist routes now do the same for review-only ops/admin access
@@ -152,35 +176,48 @@ Examples:
   - in review mode, the same pages render read-only without allowing ops/admin to change mechanic workflow data
 
 Persistent client state:
+
 - Booking flow draft data is stored in browser `localStorage` under `carSelectionData`
 - Mechanic workflow no longer depends on cached local mechanic details; identity comes from the signed-in staff account
 
 ## Reusable Components
 
 Shared UI components:
+
 - `src/components/auth/StaffSessionStatus.tsx`
+- `src/components/public/PublicLayout.tsx`
+- `src/components/public/PublicLogo.tsx`
+- `src/components/public/PublicLink.tsx`
+- `src/components/public/HeroBookingForm.tsx`
 - `src/components/forms/NumberPlateForm.tsx`
 - `src/components/forms/CarDetailsForm.tsx`
 - `src/components/navigation/Stepper.tsx`
 - `src/components/navigation/CarTabs.tsx`
 
 Booking flow step components:
+
 - `src/components/Steps/WorkSelection.tsx`
 - `src/components/Steps/UserDetails.tsx`
 - `src/components/Steps/BookingConfirmation.tsx`
+  - these have been redesigned for the new premium public booking experience with improved labels, validation states, and summary cards
 
 Mechanic reusable UI:
+
 - `src/components/mechanic/MechanicLocationCard.tsx`
 - `src/components/mechanic/MechanicLocationMap.tsx`
 
 Test/helper components:
+
 - `src/components/test/PostcodeInput.tsx`
 
 ## Database Flow
 
 High-level flow:
+
 1. Customer creates a booking through `public.create_public_booking(...)`
-  - the frontend now attempts geocoding before the booking RPC runs, so latitude/longitude can be stored at creation time
+
+- the frontend now attempts geocoding before the booking RPC runs, so latitude/longitude can be stored at creation time
+
 2. Staff users exist in Supabase Auth and get a matching row in `profiles`
 3. Ops loads bookings waiting for assignment
 4. Ops creates a row in `jobs`
@@ -195,6 +232,7 @@ High-level flow:
 13. Ops reads combined job progress from booking, job, checklist, and check-in data
 
 Important schema / SQL files:
+
 - `auth_staff_profiles.sql`: staff profiles, staff role helpers, and job-to-mechanic user link
 - `bookings_public_access.sql`: secure public booking RPC plus minimal staff booking read policies
   - the booking RPC now accepts optional coordinates and stores them with the booking when geocoding succeeds
@@ -216,6 +254,7 @@ Important schema / SQL files:
   - repo hygiene note: raw generated CSV/report artifacts are ignored in GitHub, while reusable SQL seed outputs and generator scripts stay tracked
 
 Storage flow:
+
 - Vehicle images are uploaded to the `vehicle-checks` storage bucket
 - Upload paths start with the assigned `jobId`, which is then enforced by storage RLS
 - Signed URLs are created for viewing uploaded photos
@@ -223,11 +262,14 @@ Storage flow:
 ## Important Business Logic
 
 Booking and services:
+
 - Static service definitions live in `src/data/services.ts`
+- public website service content is intentionally narrowed to oil change and brake pad replacement for the current launch scope
 - Booking price and service selection are derived on the frontend before booking creation
 - Car input can be driven by number plate or manual vehicle details, controlled by `src/config/appSettings.ts`
 
 Job workflow:
+
 - `src/lib/jobWorkflow.ts` is the main workflow module
 - When a job is created, selected services are snapshotted into job-specific service rows
 - Checklist items are also snapshotted so jobs remain stable even if the master service catalog changes later
@@ -246,12 +288,14 @@ Job workflow:
 - ops/admin can also open steps 1 and 2 in read-only mode from the progress workspace for review
 
 Job progress:
+
 - `src/lib/jobProgress.ts` derives business progress states from job status, check-in presence, and checklist completion
 - Visible location access is based on derived job progress status
 - `src/lib/mechanicJobs.ts` builds the mechanic dashboard by combining assigned jobs, booking details, check-in state, and checklist totals
 - `src/lib/jobWorkflow.ts` also powers the ops jobs workspace, which reuses the same progress dataset for both table and board views
 
 Vehicle check-in:
+
 - Validation helpers live in `src/utils/vehicleCheckInValidation.ts`
 - Image compression support lives in `src/utils/imageCompression.ts`
 - Authenticated mechanics now need `vehicle_check_in_staff_access.sql` to save check-ins for jobs assigned to them
@@ -262,16 +306,58 @@ Vehicle check-in:
 - Once a job is completed, mechanics should no longer receive booking contact details, address/location data, or saved arrival photos; only ops/admin keep full review access
 
 Location logic:
+
 - `src/lib/bookingLocation.ts` builds display addresses, Google Maps links, and missing coordinate recovery
 - new bookings now try to geocode before insert, while overview pages still keep the retry path for older bookings with missing coordinates
 - If exact coordinates are missing, the app attempts address geocoding and postcode fallback lookup
 - Saved booking coordinates now go through a dedicated security-definer RPC because direct frontend updates were blocked by booking RLS
 
+Public website:
+
+- root route is now a dedicated STM Motors homepage instead of redirecting straight into the old booking screen
+- public navigation includes homepage, services, about, contact, and booking routes
+- public pages use a separate premium light-theme design system from staff dashboards
+- booking flow can now be prefilled from the homepage hero form using URL query params
+- public metadata and social tags are updated client-side through `src/lib/seo.ts`
+
 ## Notes For Future Work
 
 Next auth steps:
+
 - Expand role-based policies to cover any future staff management or reporting tables
 - Add admin-only staff management flows when needed
 
-Recent policy note:
+  Recent policy note:
+
 - Customer booking now depends on the secure RPC in `bookings_public_access.sql`, so the booking flow works without keeping broad read access on `public.bookings`.
+
+current services
+car brake
+
+oil change
+oil change + filter change + sump repair
+Topup all the fluids
+
+- Pre purchase inspection
+
+ye baad main karen ge. aur add bhi website pe baad main karen ge.
+car ignition only replacmenet
+Cooling System
+Fuel System
+
+others
+aniti roll bar bishes repair
+bonnet release cable replacemnet
+clutch release repair
+
+-Car Suspension
+
+-Exhaust \_ our site
+
+Copy:
+best customer service and experience guaranteed
+customer focused service/best service
+service out of the world
+
+since 2005 \_ operating in us -
+service oriented

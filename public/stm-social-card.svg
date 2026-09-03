@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">STM Motors social card</title>
+  <desc id="desc">STM Motors mobile oil changes and brake pad replacement across the UK.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f1d2f" />
+      <stop offset="50%" stop-color="#1d3557" />
+      <stop offset="100%" stop-color="#c47a45" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="#f7f4ee" />
+  <rect x="40" y="40" width="1120" height="550" rx="36" fill="url(#bg)" />
+  <circle cx="170" cy="156" r="72" fill="rgba(255,255,255,0.12)" />
+  <circle cx="170" cy="156" r="58" fill="none" stroke="rgba(255,255,255,0.24)" stroke-width="4" />
+  <text x="170" y="168" text-anchor="middle" font-size="34" font-family="Arial, sans-serif" letter-spacing="10" fill="#ffffff">STM</text>
+  <text x="280" y="172" font-size="54" font-family="Arial, sans-serif" font-weight="700" fill="#ffffff">STM Motors</text>
+  <text x="120" y="292" font-size="76" font-family="Arial, sans-serif" font-weight="700" fill="#ffffff">
+    Mobile oil changes and
+  </text>
+  <text x="120" y="380" font-size="76" font-family="Arial, sans-serif" font-weight="700" fill="#ffffff">
+    brake pad replacement
+  </text>
+  <text x="120" y="470" font-size="32" font-family="Arial, sans-serif" fill="rgba(255,255,255,0.82)">
+    Fixed-price mobile servicing with a premium, friendly booking experience across the UK.
+  </text>
+</svg>

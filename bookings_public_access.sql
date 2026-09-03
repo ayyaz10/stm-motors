@@ -1,5 +1,35 @@
 alter table public.bookings enable row level security;
 
+alter table public.bookings
+add column if not exists availability jsonb not null default '[]'::jsonb;
+
+alter table public.bookings
+add column if not exists availability_note text;
+
+alter table public.bookings
+add column if not exists work_notes text;
+
+alter table public.bookings
+add column if not exists vehicle_driveable text;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'bookings_vehicle_driveable_check'
+      and conrelid = 'public.bookings'::regclass
+  ) then
+    alter table public.bookings
+      add constraint bookings_vehicle_driveable_check
+      check (vehicle_driveable is null or vehicle_driveable in ('yes', 'no'));
+  end if;
+end;
+$$;
+
+create index if not exists bookings_availability_gin_idx
+  on public.bookings using gin (availability);
+
 drop policy if exists "Anon can read bookings" on public.bookings;
 drop policy if exists "Public can create bookings" on public.bookings;
 drop policy if exists "Authenticated users can create bookings" on public.bookings;
@@ -25,6 +55,52 @@ drop function if exists public.create_public_booking(
   numeric
 );
 
+drop function if exists public.create_public_booking(
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text[],
+  numeric,
+  double precision,
+  double precision,
+  timestamptz
+);
+
+drop function if exists public.create_public_booking(
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text[],
+  numeric,
+  jsonb,
+  text,
+  text,
+  text,
+  double precision,
+  double precision,
+  timestamptz
+);
+
 create or replace function public.create_public_booking(
   p_full_name text,
   p_phone text,
@@ -41,6 +117,10 @@ create or replace function public.create_public_booking(
   p_year text,
   p_selected_services text[],
   p_total_price numeric,
+  p_availability jsonb default '[]'::jsonb,
+  p_availability_note text default null,
+  p_work_notes text default null,
+  p_vehicle_driveable text default null,
   p_latitude double precision default null,
   p_longitude double precision default null,
   p_geocoded_at timestamptz default null
@@ -53,6 +133,14 @@ as $$
 declare
   v_booking public.bookings%rowtype;
 begin
+  if jsonb_typeof(p_availability) <> 'array' or jsonb_array_length(p_availability) = 0 then
+    raise exception 'At least one availability window is required.';
+  end if;
+
+  if p_vehicle_driveable is not null and p_vehicle_driveable not in ('yes', 'no') then
+    raise exception 'Vehicle driveable must be yes or no.';
+  end if;
+
   if (p_latitude is null) <> (p_longitude is null) then
     raise exception 'Latitude and longitude must be provided together.';
   end if;
@@ -81,6 +169,10 @@ begin
     year,
     selected_services,
     total_price,
+    availability,
+    availability_note,
+    work_notes,
+    vehicle_driveable,
     latitude,
     longitude,
     geocoded_at
@@ -101,6 +193,10 @@ begin
     p_year,
     p_selected_services,
     p_total_price,
+    p_availability,
+    nullif(btrim(p_availability_note), ''),
+    nullif(btrim(p_work_notes), ''),
+    p_vehicle_driveable,
     p_latitude,
     p_longitude,
     case
@@ -118,7 +214,11 @@ begin
     'car_registration', v_booking.car_registration,
     'created_at', v_booking.created_at,
     'total_price', v_booking.total_price,
-    'selected_services', v_booking.selected_services
+    'selected_services', v_booking.selected_services,
+    'availability', v_booking.availability,
+    'availability_note', v_booking.availability_note,
+    'work_notes', v_booking.work_notes,
+    'vehicle_driveable', v_booking.vehicle_driveable
   );
 end;
 $$;
@@ -139,6 +239,10 @@ revoke all on function public.create_public_booking(
   text,
   text[],
   numeric,
+  jsonb,
+  text,
+  text,
+  text,
   double precision,
   double precision,
   timestamptz
@@ -160,6 +264,10 @@ grant execute on function public.create_public_booking(
   text,
   text[],
   numeric,
+  jsonb,
+  text,
+  text,
+  text,
   double precision,
   double precision,
   timestamptz

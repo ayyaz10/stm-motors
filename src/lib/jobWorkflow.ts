@@ -1,4 +1,5 @@
 import { services } from "../data/services";
+import type { BookingAvailabilityDay } from "./availability";
 import type { BookingLocationAddress } from "./bookingLocation";
 import {
   deriveJobProgressStatus,
@@ -94,6 +95,10 @@ export interface JobWorkflowBooking {
   latitude: number | null;
   longitude: number | null;
   selected_services: string[];
+  availability: BookingAvailabilityDay[];
+  availability_note: string | null;
+  work_notes: string | null;
+  vehicle_driveable: "yes" | "no" | null;
   total_price: number;
   created_at: string;
 }
@@ -273,7 +278,7 @@ async function fetchJobByReference(reference: string): Promise<CreatedJob> {
   const baseQuery = supabase
     .from("jobs")
     .select(
-      "id, booking_id, job_reference, status, booking_number_snapshot, car_registration_snapshot, vehicle_summary_snapshot, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, ops_notes, created_at, updated_at",
+      "id, booking_id, job_reference, status, booking_number_snapshot, car_registration_snapshot, vehicle_summary_snapshot, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, scheduled_arrival_window, ops_notes, created_at, updated_at",
     );
 
   if (isUuid(reference)) {
@@ -291,7 +296,7 @@ async function fetchJobByReference(reference: string): Promise<CreatedJob> {
   const { data, error } = await supabase
     .from("jobs")
     .select(
-      "id, booking_id, job_reference, status, booking_number_snapshot, car_registration_snapshot, vehicle_summary_snapshot, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, ops_notes, created_at, updated_at",
+      "id, booking_id, job_reference, status, booking_number_snapshot, car_registration_snapshot, vehicle_summary_snapshot, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, scheduled_arrival_window, ops_notes, created_at, updated_at",
     )
     .eq("job_reference", reference)
     .maybeSingle();
@@ -315,7 +320,7 @@ export async function fetchJobWorkflowOverview(
   const { data: bookingData, error: bookingError } = await supabase
     .from("bookings")
     .select(
-      "id, booking_number, full_name, phone, email, street_address_1, street_address_2, city, postcode, car_registration, make, model, fuel, engine, year, latitude, longitude, selected_services, total_price, created_at",
+      "id, booking_number, full_name, phone, email, street_address_1, street_address_2, city, postcode, car_registration, make, model, fuel, engine, year, latitude, longitude, selected_services, availability, availability_note, work_notes, vehicle_driveable, total_price, created_at",
     )
     .eq("id", job.booking_id)
     .maybeSingle();
@@ -467,6 +472,10 @@ export async function fetchJobWorkflowOverview(
             ? bookingData.longitude
             : Number(bookingData.longitude) || null,
         selected_services: bookingData.selected_services,
+        availability: (bookingData.availability ?? []) as BookingAvailabilityDay[],
+        availability_note: bookingData.availability_note,
+        work_notes: bookingData.work_notes,
+        vehicle_driveable: bookingData.vehicle_driveable,
         total_price: Number(bookingData.total_price),
         created_at: bookingData.created_at,
       }
@@ -489,6 +498,10 @@ export async function fetchJobWorkflowOverview(
         latitude: null,
         longitude: null,
         selected_services: [],
+        availability: [],
+        availability_note: null,
+        work_notes: null,
+        vehicle_driveable: null,
         total_price: 0,
         created_at: job.created_at,
       };
@@ -544,7 +557,7 @@ export async function fetchOpsJobProgressBoard(): Promise<
   const { data: jobsData, error: jobsError } = await supabase
     .from("jobs")
     .select(
-      "id, booking_id, job_reference, status, booking_number_snapshot, car_registration_snapshot, vehicle_summary_snapshot, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, ops_notes, created_at, updated_at",
+      "id, booking_id, job_reference, status, booking_number_snapshot, car_registration_snapshot, vehicle_summary_snapshot, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, scheduled_arrival_window, ops_notes, created_at, updated_at",
     )
     .order("created_at", { ascending: false })
     .limit(100);

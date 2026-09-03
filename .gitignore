@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 *.local
+*.tsbuildinfo
+*.zip
 
 # Editor directories and files
 .vscode/*
@@ -29,5 +31,8 @@ dist-ssr
 .env.test.local
 .env.production.local
 insipration/
+inspiration-for-frontend/
+inpireation-for-frontend 2/
+stm-motors-co-uk-marketplace-final-2026-09-02/
 supabase/generated/*.csv
 supabase/generated/*.json

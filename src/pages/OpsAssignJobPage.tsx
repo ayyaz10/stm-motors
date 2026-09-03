@@ -3,8 +3,8 @@ import clsx from "clsx";
 import {
   AlertCircle,
   BriefcaseBusiness,
-  CalendarDays,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   LoaderCircle,
   RefreshCw,
@@ -25,6 +25,22 @@ import {
   fetchMechanicOptions,
   type MechanicOption,
 } from "../lib/mechanics";
+import {
+  AVAILABILITY_GROUPS,
+  AVAILABILITY_SLOTS,
+  formatAvailabilityDate,
+  formatAvailabilityDaySummary,
+  getAvailabilityWindowTimes,
+  type AvailabilityBlock,
+  type AvailabilityBlockType,
+  type AvailabilityWindowKey,
+} from "../lib/availability";
+import {
+  createAvailabilityBlock,
+  deleteAvailabilityBlock,
+  fetchOpsAvailabilityBlocks,
+} from "../lib/availabilityBlocks";
+import DashboardSelect from "../components/dashboard/DashboardSelect";
 import {
   fetchVehicleCheckInPhotoPathsForJob,
   removeVehicleCheckInPhotos,
@@ -53,6 +69,88 @@ interface LatestAssignment {
   mechanicEmail: string;
 }
 
+type AvailabilityDragMode = "select" | "deselect";
+
+const todayDateKey = () => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+const addDaysToDateKey = (dateKey: string, dayCount: number) => {
+  const date = new Date(`${dateKey}T00:00:00`);
+
+  date.setDate(date.getDate() + dayCount);
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+function getDateRangeKeys(startDateKey: string, endDateKey: string) {
+  const rangeStart = startDateKey <= endDateKey ? startDateKey : endDateKey;
+  const rangeEnd = startDateKey <= endDateKey ? endDateKey : startDateKey;
+  const dates: string[] = [];
+  let currentDate = rangeStart;
+
+  while (currentDate <= rangeEnd) {
+    dates.push(currentDate);
+    currentDate = addDaysToDateKey(currentDate, 1);
+  }
+
+  return dates;
+}
+
+function normalizeAvailabilityBlockDates(dates: string[]) {
+  return Array.from(new Set(dates.filter((date) => date >= todayDateKey()))).sort();
+}
+
+const toDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+const startOfMonth = (date: Date) =>
+  new Date(date.getFullYear(), date.getMonth(), 1);
+
+const addMonths = (date: Date, monthCount: number) =>
+  new Date(date.getFullYear(), date.getMonth() + monthCount, 1);
+
+const formatCalendarMonth = (date: Date) =>
+  new Intl.DateTimeFormat("en-GB", {
+    month: "long",
+    year: "numeric",
+  }).format(date);
+
+function buildCalendarMonthDays(monthDate: Date) {
+  const monthStart = startOfMonth(monthDate);
+  const month = monthStart.getMonth();
+  const offset = (monthStart.getDay() + 6) % 7;
+  const firstGridDate = new Date(monthStart);
+
+  firstGridDate.setDate(monthStart.getDate() - offset);
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(firstGridDate);
+
+    date.setDate(firstGridDate.getDate() + index);
+
+    return {
+      date,
+      dateKey: toDateKey(date),
+      isCurrentMonth: date.getMonth() === month,
+    };
+  });
+}
+
 function formatMechanicLabel(mechanic: MechanicOption): string {
   if (mechanic.full_name?.trim()) {
     return `${mechanic.full_name} (${mechanic.email})`;
@@ -68,16 +166,22 @@ function formatBookingTime(timestamp: string): string {
   }).format(new Date(timestamp));
 }
 
-function formatDateTimeLocalValue(value: string | null): string {
-  if (!value) {
-    return "";
-  }
+function formatBlockWindow(block: AvailabilityBlock): string {
+  return `${formatAvailabilityDate(block.date)}, ${block.start_time}-${block.end_time}`;
+}
 
-  const date = new Date(value);
-  const offset = date.getTimezoneOffset();
-  const localDate = new Date(date.getTime() - offset * 60_000);
+function getBlockTypeLabel(type: AvailabilityBlockType): string {
+  if (type === "manual_hold") return "Manual hold";
+  if (type === "scheduled_job") return "Booked job";
 
-  return localDate.toISOString().slice(0, 16);
+  return "Closed";
+}
+
+function formatDriveable(value: "yes" | "no" | null): string {
+  if (value === "yes") return "Driveable";
+  if (value === "no") return "Not driveable";
+
+  return "Not specified";
 }
 
 function getAssignmentStatusMeta(booking: BookingAssignmentCandidate): {
@@ -135,7 +239,6 @@ function OpsAssignJobPage({
   const [mechanics, setMechanics] = useState<MechanicOption[]>([]);
   const [selectedBookingId, setSelectedBookingId] = useState("");
   const [selectedMechanicId, setSelectedMechanicId] = useState("");
-  const [scheduledFor, setScheduledFor] = useState("");
   const [opsNotes, setOpsNotes] = useState("");
   const [reopenReason, setReopenReason] = useState("");
   const [resetWorkflowOnReopen, setResetWorkflowOnReopen] = useState(false);
@@ -161,6 +264,36 @@ function OpsAssignJobPage({
   const [assignedJobsTab, setAssignedJobsTab] = useState<"assigned" | "started">(
     "assigned",
   );
+  const [availabilityBlocks, setAvailabilityBlocks] = useState<AvailabilityBlock[]>([]);
+  const [availabilityCalendarMonth, setAvailabilityCalendarMonth] = useState(() =>
+    startOfMonth(new Date()),
+  );
+  const [selectedAvailabilityBlockDates, setSelectedAvailabilityBlockDates] =
+    useState<string[]>(() => [todayDateKey()]);
+  const [availabilityRangeAnchor, setAvailabilityRangeAnchor] =
+    useState<string>(todayDateKey());
+  const [availabilityDragStart, setAvailabilityDragStart] =
+    useState<string | null>(null);
+  const [availabilityDragEnd, setAvailabilityDragEnd] =
+    useState<string | null>(null);
+  const [availabilityDragMode, setAvailabilityDragMode] =
+    useState<AvailabilityDragMode>("select");
+  const [availabilityBlockWindow, setAvailabilityBlockWindow] =
+    useState<AvailabilityWindowKey>("group:all_day");
+  const [availabilityBlockType, setAvailabilityBlockType] =
+    useState<Exclude<AvailabilityBlockType, "scheduled_job">>("closed");
+  const [availabilityBlockReason, setAvailabilityBlockReason] = useState("");
+  const [availabilityBlockError, setAvailabilityBlockError] = useState<string | null>(
+    null,
+  );
+  const [isAvailabilityBlocksLoading, setIsAvailabilityBlocksLoading] =
+    useState(false);
+  const [isSavingAvailabilityBlock, setIsSavingAvailabilityBlock] =
+    useState(false);
+  const [removingAvailabilityBlockId, setRemovingAvailabilityBlockId] =
+    useState<string | null>(null);
+  const [isRemovingAllAvailabilityBlocks, setIsRemovingAllAvailabilityBlocks] =
+    useState(false);
 
   const selectedBooking = useMemo(
     () => bookings.find((booking) => booking.id === selectedBookingId) ?? null,
@@ -170,6 +303,83 @@ function OpsAssignJobPage({
     () => mechanics.find((mechanic) => mechanic.id === selectedMechanicId) ?? null,
     [mechanics, selectedMechanicId],
   );
+  const displayedAvailabilityBlockDates = useMemo(() => {
+    if (!availabilityDragStart || !availabilityDragEnd) {
+      return selectedAvailabilityBlockDates;
+    }
+
+    const draggedDates = getDateRangeKeys(
+      availabilityDragStart,
+      availabilityDragEnd,
+    ).filter((date) => date >= todayDateKey());
+
+    if (availabilityDragMode === "deselect") {
+      const draggedDateSet = new Set(draggedDates);
+
+      return normalizeAvailabilityBlockDates(
+        selectedAvailabilityBlockDates.filter(
+          (date) => !draggedDateSet.has(date),
+        ),
+      );
+    }
+
+    return normalizeAvailabilityBlockDates([
+      ...selectedAvailabilityBlockDates,
+      ...draggedDates,
+    ]);
+  }, [
+    availabilityDragEnd,
+    availabilityDragMode,
+    availabilityDragStart,
+    selectedAvailabilityBlockDates,
+  ]);
+  const displayedAvailabilityBlockDatesSet = useMemo(
+    () => new Set(displayedAvailabilityBlockDates),
+    [displayedAvailabilityBlockDates],
+  );
+  const selectedAvailabilityRangeSegments = useMemo(() => {
+    const selectedDates = [...displayedAvailabilityBlockDates].sort();
+    const segments = new Map<
+      string,
+      {
+        isStart: boolean;
+        isEnd: boolean;
+        isMiddle: boolean;
+        isSingle: boolean;
+      }
+    >();
+    let index = 0;
+
+    while (index < selectedDates.length) {
+      const segmentDates = [selectedDates[index]];
+
+      while (
+        index + 1 < selectedDates.length &&
+        selectedDates[index + 1] === addDaysToDateKey(selectedDates[index], 1)
+      ) {
+        index += 1;
+        segmentDates.push(selectedDates[index]);
+      }
+
+      segmentDates.forEach((date, segmentIndex) => {
+        const isSingle = segmentDates.length === 1;
+
+        segments.set(date, {
+          isSingle,
+          isStart: !isSingle && segmentIndex === 0,
+          isEnd: !isSingle && segmentIndex === segmentDates.length - 1,
+          isMiddle:
+            !isSingle &&
+            segmentIndex > 0 &&
+            segmentIndex < segmentDates.length - 1,
+        });
+      });
+
+      index += 1;
+    }
+
+    return segments;
+  }, [displayedAvailabilityBlockDates]);
   const isEditingJob = Boolean(selectedBooking?.existing_job);
   const isSelectedJobClosed =
     selectedBooking?.existing_job?.status === "completed" ||
@@ -282,9 +492,30 @@ function OpsAssignJobPage({
     }
   };
 
+  const loadAvailabilityBlocks = async () => {
+    try {
+      setIsAvailabilityBlocksLoading(true);
+      setAvailabilityBlockError(null);
+
+      const startDate = todayDateKey();
+      const endDate = addDaysToDateKey(startDate, 45);
+
+      setAvailabilityBlocks(await fetchOpsAvailabilityBlocks(startDate, endDate));
+    } catch (error) {
+      setAvailabilityBlockError(
+        error instanceof Error
+          ? error.message
+          : "Unable to load availability blocks.",
+      );
+    } finally {
+      setIsAvailabilityBlocksLoading(false);
+    }
+  };
+
   useEffect(() => {
     void loadBookings();
     void loadMechanics();
+    void loadAvailabilityBlocks();
   }, []);
 
   useEffect(() => {
@@ -298,9 +529,6 @@ function OpsAssignJobPage({
       setSelectedMechanicId(
         selectedBooking.existing_job.assigned_mechanic_user_id ?? "",
       );
-      setScheduledFor(
-        formatDateTimeLocalValue(selectedBooking.existing_job.scheduled_for),
-      );
       setOpsNotes(selectedBooking.existing_job.ops_notes ?? "");
       setReopenReason("");
       setResetWorkflowOnReopen(false);
@@ -308,7 +536,6 @@ function OpsAssignJobPage({
       return;
     }
 
-    setScheduledFor("");
     setOpsNotes("");
     setReopenReason("");
     setResetWorkflowOnReopen(false);
@@ -331,7 +558,6 @@ function OpsAssignJobPage({
   const resetAssignmentForm = (nextBookingId = "") => {
     setSelectedBookingId(nextBookingId);
     setSelectedMechanicId("");
-    setScheduledFor("");
     setOpsNotes("");
     setReopenReason("");
     setResetWorkflowOnReopen(false);
@@ -461,7 +687,6 @@ function OpsAssignJobPage({
           assigned_mechanic_user_id: selectedMechanic.id,
           assigned_mechanic_name: assignedMechanicName,
           assigned_mechanic_phone: null,
-          scheduled_for: scheduledFor || null,
           ops_notes: opsNotes.trim() || null,
         });
         locationMessage =
@@ -491,7 +716,6 @@ function OpsAssignJobPage({
             assigned_mechanic_user_id: selectedMechanic.id,
             assigned_mechanic_name: assignedMechanicName,
             assigned_mechanic_phone: null,
-            scheduled_for: scheduledFor || null,
             ops_notes: opsNotes.trim() || null,
           },
           selectedBookingSnapshot.selected_services,
@@ -612,11 +836,247 @@ function OpsAssignJobPage({
     setBookingTab("assigned");
     setSelectedBookingId(booking.id);
     setSelectedMechanicId(booking.existing_job.assigned_mechanic_user_id ?? "");
-    setScheduledFor(formatDateTimeLocalValue(booking.existing_job.scheduled_for));
     setOpsNotes(booking.existing_job.ops_notes ?? "");
     setErrors({});
     setSubmitError(null);
     setAssignmentActionMessage(null);
+  };
+
+  const handleCreateAvailabilityBlock = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
+    const times = getAvailabilityWindowTimes(availabilityBlockWindow);
+    const datesToBlock = normalizeAvailabilityBlockDates(
+      selectedAvailabilityBlockDates,
+    );
+
+    if (!times) {
+      setAvailabilityBlockError("Choose a valid availability window.");
+      return;
+    }
+
+    if (datesToBlock.length === 0) {
+      setAvailabilityBlockError("Select at least one date to block.");
+      return;
+    }
+
+    try {
+      setIsSavingAvailabilityBlock(true);
+      setAvailabilityBlockError(null);
+
+      const nextBlocks = await Promise.all(
+        datesToBlock.map((date) =>
+          createAvailabilityBlock({
+            date,
+            start_time: times.start_time,
+            end_time: times.end_time,
+            block_type: availabilityBlockType,
+            reason: availabilityBlockReason.trim() || null,
+          }),
+        ),
+      );
+
+      setAvailabilityBlocks((currentBlocks) =>
+        [...nextBlocks, ...currentBlocks].sort((left, right) =>
+          `${left.date}${left.start_time}`.localeCompare(
+            `${right.date}${right.start_time}`,
+          ),
+        ),
+      );
+      setAvailabilityBlockReason("");
+      setSelectedAvailabilityBlockDates([]);
+      setAvailabilityDragStart(null);
+      setAvailabilityDragEnd(null);
+      setAvailabilityDragMode("select");
+    } catch (error) {
+      setAvailabilityBlockError(
+        error instanceof Error
+          ? error.message
+          : "Unable to save this availability block.",
+      );
+    } finally {
+      setIsSavingAvailabilityBlock(false);
+    }
+  };
+
+  const handleRemoveAvailabilityBlock = async (blockId: string) => {
+    try {
+      setRemovingAvailabilityBlockId(blockId);
+      setAvailabilityBlockError(null);
+
+      await deleteAvailabilityBlock(blockId);
+      setAvailabilityBlocks((currentBlocks) =>
+        currentBlocks.filter((block) => block.id !== blockId),
+      );
+    } catch (error) {
+      setAvailabilityBlockError(
+        error instanceof Error
+          ? error.message
+          : "Unable to remove this availability block.",
+      );
+    } finally {
+      setRemovingAvailabilityBlockId(null);
+    }
+  };
+
+  const handleRemoveAllAvailabilityBlocks = async () => {
+    if (availabilityBlocks.length === 0) {
+      return;
+    }
+
+    try {
+      setIsRemovingAllAvailabilityBlocks(true);
+      setAvailabilityBlockError(null);
+
+      await Promise.all(
+        availabilityBlocks.map((block) => deleteAvailabilityBlock(block.id)),
+      );
+      setAvailabilityBlocks([]);
+    } catch (error) {
+      setAvailabilityBlockError(
+        error instanceof Error
+          ? error.message
+          : "Unable to remove all availability blocks.",
+      );
+      await loadAvailabilityBlocks();
+    } finally {
+      setIsRemovingAllAvailabilityBlocks(false);
+    }
+  };
+
+  const toggleAvailabilityBlockDate = (dateKey: string) => {
+    if (dateKey < todayDateKey()) {
+      return;
+    }
+
+    setSelectedAvailabilityBlockDates((currentDates) => {
+      if (currentDates.includes(dateKey)) {
+        return normalizeAvailabilityBlockDates(
+          currentDates.filter((date) => date !== dateKey),
+        );
+      }
+
+      return normalizeAvailabilityBlockDates([...currentDates, dateKey]);
+    });
+    setAvailabilityRangeAnchor(dateKey);
+    setAvailabilityBlockError(null);
+  };
+
+  const addAvailabilityBlockDateRange = (startDate: string, endDate: string) => {
+    const rangeDates = getDateRangeKeys(startDate, endDate).filter(
+      (date) => date >= todayDateKey(),
+    );
+
+    setSelectedAvailabilityBlockDates((currentDates) =>
+      normalizeAvailabilityBlockDates([...currentDates, ...rangeDates]),
+    );
+    setAvailabilityRangeAnchor(endDate);
+    setAvailabilityBlockError(null);
+  };
+
+  const removeAvailabilityBlockDateRange = (
+    startDate: string,
+    endDate: string,
+  ) => {
+    const rangeDateSet = new Set(
+      getDateRangeKeys(startDate, endDate).filter((date) => date >= todayDateKey()),
+    );
+
+    setSelectedAvailabilityBlockDates((currentDates) =>
+      normalizeAvailabilityBlockDates(
+        currentDates.filter((date) => !rangeDateSet.has(date)),
+      ),
+    );
+    setAvailabilityRangeAnchor(endDate);
+    setAvailabilityBlockError(null);
+  };
+
+  const toggleAvailabilityBlockDateRange = (
+    startDate: string,
+    endDate: string,
+  ) => {
+    const rangeDates = getDateRangeKeys(startDate, endDate).filter(
+      (date) => date >= todayDateKey(),
+    );
+    const selectedDateSet = new Set(selectedAvailabilityBlockDates);
+    const isFullySelected =
+      rangeDates.length > 0 && rangeDates.every((date) => selectedDateSet.has(date));
+
+    if (isFullySelected) {
+      removeAvailabilityBlockDateRange(startDate, endDate);
+    } else {
+      addAvailabilityBlockDateRange(startDate, endDate);
+    }
+  };
+
+  const clearAvailabilityBlockDates = () => {
+    setSelectedAvailabilityBlockDates([]);
+    setAvailabilityDragStart(null);
+    setAvailabilityDragEnd(null);
+    setAvailabilityDragMode("select");
+    setAvailabilityBlockError(null);
+  };
+
+  const handleAvailabilityDateMouseDown = (
+    dateKey: string,
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    if (event.shiftKey || dateKey < todayDateKey()) {
+      return;
+    }
+
+    setAvailabilityDragStart(dateKey);
+    setAvailabilityDragEnd(dateKey);
+    setAvailabilityDragMode(
+      selectedAvailabilityBlockDates.includes(dateKey) ? "deselect" : "select",
+    );
+  };
+
+  const handleAvailabilityDateMouseEnter = (dateKey: string) => {
+    if (!availabilityDragStart || dateKey < todayDateKey()) {
+      return;
+    }
+
+    setAvailabilityDragEnd(dateKey);
+  };
+
+  const handleAvailabilityDateMouseUp = (
+    dateKey: string,
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    if (event.shiftKey) {
+      return;
+    }
+
+    if (!availabilityDragStart) {
+      return;
+    }
+
+    if (availabilityDragStart === dateKey) {
+      toggleAvailabilityBlockDate(dateKey);
+    } else if (availabilityDragMode === "deselect") {
+      removeAvailabilityBlockDateRange(availabilityDragStart, dateKey);
+    } else {
+      addAvailabilityBlockDateRange(availabilityDragStart, dateKey);
+    }
+
+    setAvailabilityDragStart(null);
+    setAvailabilityDragEnd(null);
+    setAvailabilityDragMode("select");
+  };
+
+  const handleAvailabilityDateClick = (
+    dateKey: string,
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    if (!event.shiftKey || dateKey < todayDateKey()) {
+      return;
+    }
+
+    event.preventDefault();
+    toggleAvailabilityBlockDateRange(availabilityRangeAnchor, dateKey);
   };
 
   return (
@@ -826,6 +1286,12 @@ function OpsAssignJobPage({
                           <p className="mt-2 text-xs text-slate-500">
                             {assignmentMeta.helperText}
                           </p>
+                          {booking.availability.length > 0 ? (
+                            <p className="mt-2 text-xs font-medium text-sky-700">
+                              {booking.availability.length} available{" "}
+                              {booking.availability.length === 1 ? "date" : "dates"} submitted
+                            </p>
+                          ) : null}
                           {bookingTab === "assigned" ? (
                             <p className="mt-2 text-xs font-medium text-sky-700">
                               Select this job to edit assignment details on the right.
@@ -841,7 +1307,10 @@ function OpsAssignJobPage({
 
                         <div className="text-sm text-slate-600 sm:text-right">
                           <p className="font-semibold text-slate-900">
-                            £{booking.total_price.toFixed(2)}
+                            {booking.pricing_type === "from" ? "From " : ""}£
+                            {Number(
+                              booking.quoted_price ?? booking.total_price,
+                            ).toFixed(2)}
                           </p>
                           <p className="mt-1">
                             {booking.selected_services.length} service
@@ -890,35 +1359,34 @@ function OpsAssignJobPage({
                       ? "Editing job"
                       : "Selected booking"}
                 </span>
-                <select
+                <DashboardSelect
                   value={selectedBookingId}
-                  onChange={(event) => {
-                    setSelectedBookingId(event.target.value);
+                  onChange={(nextBookingId) => {
+                    setSelectedBookingId(nextBookingId);
                     setErrors((currentErrors) => ({
                       ...currentErrors,
                       bookingId: undefined,
                     }));
                   }}
-                  className={clsx(
-                    "min-h-12 w-full rounded-2xl border bg-slate-50 px-4 text-sm text-slate-900 outline-none transition focus:bg-white focus:ring-4",
-                    errors.bookingId
-                      ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100"
-                      : "border-slate-200 focus:border-sky-400 focus:ring-sky-100",
-                  )}
-                >
-                  <option value="">Select a booking</option>
-                  {(isEditingJob
-                    ? bookings.filter(
-                        (booking) =>
-                          booking.id === selectedBookingId || !booking.existing_job,
-                      )
-                    : availableBookings
-                  ).map((booking) => (
-                    <option key={booking.id} value={booking.id}>
-                      {booking.booking_number} - {booking.full_name}
-                    </option>
-                  ))}
-                </select>
+                  invalid={Boolean(errors.bookingId)}
+                  placeholder="Select a booking"
+                  ariaLabel="Select booking"
+                  buttonClassName="min-h-12"
+                  options={[
+                    { value: "", label: "Select a booking" },
+                    ...(isEditingJob
+                      ? bookings.filter(
+                          (booking) =>
+                            booking.id === selectedBookingId ||
+                            !booking.existing_job,
+                        )
+                      : availableBookings
+                    ).map((booking) => ({
+                      value: booking.id,
+                      label: `${booking.booking_number} - ${booking.full_name}`,
+                    })),
+                  ]}
+                />
                 {errors.bookingId ? (
                   <p className="flex items-center gap-2 text-sm text-rose-600">
                     <AlertCircle className="h-4 w-4" />
@@ -948,6 +1416,52 @@ function OpsAssignJobPage({
                   </p>
                   <p className="mt-1">{selectedBooking.full_name}</p>
                   <p className="mt-1">{selectedBooking.car_registration}</p>
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      Customer availability
+                    </p>
+                    {selectedBooking.availability.length > 0 ? (
+                      <ul className="mt-3 space-y-2">
+                        {selectedBooking.availability.map((day) => (
+                          <li key={day.date}>
+                            <p className="font-semibold text-slate-900">
+                              {formatAvailabilityDate(day.date)}
+                            </p>
+                            <p className="mt-0.5 text-xs text-slate-500">
+                              {formatAvailabilityDaySummary(day)}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-2 text-xs text-amber-700">
+                        No structured availability was saved for this booking.
+                      </p>
+                    )}
+                    {selectedBooking.availability_note?.trim() ? (
+                      <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-600">
+                        Note: {selectedBooking.availability_note}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                        Vehicle movement
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-slate-900">
+                        {formatDriveable(selectedBooking.vehicle_driveable)}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                        Service notes
+                      </p>
+                      <p className="mt-2 text-sm text-slate-600">
+                        {selectedBooking.work_notes?.trim() || "No notes added"}
+                      </p>
+                    </div>
+                  </div>
                   {isReopenMode ? (
                     <p className="mt-2 text-xs text-slate-500">
                       Reopening keeps control with ops/admin. Use the reason
@@ -1056,10 +1570,10 @@ function OpsAssignJobPage({
                       <UserRound className="h-4 w-4 text-slate-500" />
                       Mechanic
                     </span>
-                    <select
+                    <DashboardSelect
                       value={selectedMechanicId}
-                      onChange={(event) => {
-                        setSelectedMechanicId(event.target.value);
+                      onChange={(nextMechanicId) => {
+                        setSelectedMechanicId(nextMechanicId);
                         setErrors((currentErrors) => ({
                           ...currentErrors,
                           mechanicId: undefined,
@@ -1067,26 +1581,31 @@ function OpsAssignJobPage({
                         setSubmitError(null);
                       }}
                       disabled={isMechanicsLoading || mechanics.length === 0}
-                      className={clsx(
-                        "min-h-12 w-full rounded-2xl border bg-slate-50 px-4 text-sm text-slate-900 outline-none transition focus:bg-white focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400",
-                        errors.mechanicId
-                          ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100"
-                          : "border-slate-200 focus:border-sky-400 focus:ring-sky-100",
-                      )}
-                    >
-                      <option value="">
-                        {isMechanicsLoading
+                      invalid={Boolean(errors.mechanicId)}
+                      placeholder={
+                        isMechanicsLoading
                           ? "Loading mechanics..."
                           : mechanics.length === 0
                             ? "No mechanics available"
-                            : "Select a mechanic"}
-                      </option>
-                      {mechanics.map((mechanic) => (
-                        <option key={mechanic.id} value={mechanic.id}>
-                          {formatMechanicLabel(mechanic)}
-                        </option>
-                      ))}
-                    </select>
+                            : "Select a mechanic"
+                      }
+                      ariaLabel="Select mechanic"
+                      buttonClassName="min-h-12"
+                      options={[
+                        {
+                          value: "",
+                          label: isMechanicsLoading
+                            ? "Loading mechanics..."
+                            : mechanics.length === 0
+                              ? "No mechanics available"
+                              : "Select a mechanic",
+                        },
+                        ...mechanics.map((mechanic) => ({
+                          value: mechanic.id,
+                          label: formatMechanicLabel(mechanic),
+                        })),
+                      ]}
+                    />
                     {selectedMechanic ? (
                       <p className="text-sm text-slate-500">
                         Assigning to {formatMechanicLabel(selectedMechanic)}
@@ -1100,32 +1619,11 @@ function OpsAssignJobPage({
                     ) : null}
                   </label>
 
-                  <label className="space-y-2">
-                    <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                      <AlertCircle className="h-4 w-4 text-slate-500" />
-                      Assignment note
-                    </span>
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                      Ops now assigns jobs to a real mechanic account instead of a
-                      typed name and phone number.
-                    </div>
-                  </label>
-
-                  <label className="space-y-2">
-                    <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                      <CalendarDays className="h-4 w-4 text-slate-500" />
-                      Scheduled for
-                      <span className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
-                        Optional
-                      </span>
-                    </span>
-                    <input
-                      type="datetime-local"
-                      value={scheduledFor}
-                      onChange={(event) => setScheduledFor(event.target.value)}
-                      className="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-100"
-                    />
-                  </label>
+                  <div className="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm leading-6 text-sky-800">
+                    Ops assigns the mechanic here. The mechanic will choose the
+                    final arrival window from the customer availability on their
+                    job overview.
+                  </div>
 
                   <label className="space-y-2">
                     <span className="text-sm font-semibold text-slate-900">
@@ -1207,6 +1705,368 @@ function OpsAssignJobPage({
                 )}
               </button>
             </form>
+
+            <section className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Availability control
+                  </p>
+                  <h3 className="mt-1 text-base font-semibold text-slate-950">
+                    Close or hold customer slots
+                  </h3>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    Blocks appear as unavailable in the customer booking
+                    calendar. Scheduled jobs are also treated as booked.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void loadAvailabilityBlocks()}
+                  disabled={isAvailabilityBlocksLoading}
+                  className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={clsx(
+                      "h-4 w-4",
+                      isAvailabilityBlocksLoading && "animate-spin",
+                    )}
+                  />
+                </button>
+              </div>
+
+              <form
+                onSubmit={handleCreateAvailabilityBlock}
+                className="mt-4 grid gap-3"
+              >
+                <div className="rounded-3xl border border-slate-200 bg-white p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAvailabilityCalendarMonth((currentMonth) =>
+                          addMonths(currentMonth, -1),
+                        )
+                      }
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600"
+                      aria-label="Previous month"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <div className="text-center">
+                      <p className="text-sm font-semibold text-slate-950">
+                        Select dates
+                      </p>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {selectedAvailabilityBlockDates.length} selected
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAvailabilityCalendarMonth((currentMonth) =>
+                          addMonths(currentMonth, 1),
+                        )
+                      }
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600"
+                      aria-label="Next month"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div className="mt-3 rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-xs leading-5 text-sky-800">
+                    Click dates one by one, or drag across days to select a range.
+                    Shift-click also fills a range from the last selected date.
+                  </div>
+
+                  <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                    {[availabilityCalendarMonth, addMonths(availabilityCalendarMonth, 1)].map(
+                      (monthDate) => (
+                        <div key={toDateKey(monthDate)} className="min-w-0">
+                          <p className="text-center text-sm font-semibold text-slate-950">
+                            {formatCalendarMonth(monthDate)}
+                          </p>
+                          <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[11px] font-semibold text-slate-500">
+                            {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map(
+                              (weekday) => (
+                                <span key={weekday}>{weekday}</span>
+                              ),
+                            )}
+                          </div>
+                          <div className="mt-2 grid grid-cols-7 gap-1">
+                            {buildCalendarMonthDays(monthDate).map((day) => {
+                              const isSelected =
+                                displayedAvailabilityBlockDatesSet.has(day.dateKey);
+                              const isPast = day.dateKey < todayDateKey();
+                              const segment =
+                                selectedAvailabilityRangeSegments.get(day.dateKey);
+                              const selectedClassName = segment?.isSingle
+                                ? "rounded-xl bg-slate-950 text-white shadow-sm"
+                                : segment?.isStart
+                                  ? "rounded-l-xl rounded-r-none bg-slate-950 text-white shadow-sm"
+                                  : segment?.isEnd
+                                    ? "rounded-l-none rounded-r-xl bg-slate-950 text-white shadow-sm"
+                                    : segment?.isMiddle
+                                      ? "rounded-none bg-slate-950 text-white shadow-sm"
+                                      : "";
+
+                              return (
+                                <button
+                                  key={day.dateKey}
+                                  type="button"
+                                  onMouseDown={(event) =>
+                                    handleAvailabilityDateMouseDown(
+                                      day.dateKey,
+                                      event,
+                                    )
+                                  }
+                                  onMouseEnter={() =>
+                                    handleAvailabilityDateMouseEnter(day.dateKey)
+                                  }
+                                  onMouseUp={(event) =>
+                                    handleAvailabilityDateMouseUp(
+                                      day.dateKey,
+                                      event,
+                                    )
+                                  }
+                                  onClick={(event) =>
+                                    handleAvailabilityDateClick(
+                                      day.dateKey,
+                                      event,
+                                    )
+                                  }
+                                  onKeyDown={(event) => {
+                                    if (
+                                      event.key !== "Enter" &&
+                                      event.key !== " "
+                                    ) {
+                                      return;
+                                    }
+
+                                    event.preventDefault();
+
+                                    if (event.shiftKey) {
+                                      toggleAvailabilityBlockDateRange(
+                                        availabilityRangeAnchor,
+                                        day.dateKey,
+                                      );
+                                    } else {
+                                      toggleAvailabilityBlockDate(day.dateKey);
+                                    }
+                                  }}
+                                  aria-pressed={
+                                    selectedAvailabilityBlockDates.includes(
+                                      day.dateKey,
+                                    )
+                                  }
+                                  disabled={isPast}
+                                  className={clsx(
+                                    "flex aspect-square min-h-8 items-center justify-center text-xs font-semibold transition",
+                                    isSelected
+                                      ? selectedClassName
+                                      : isPast
+                                        ? "cursor-not-allowed rounded-xl text-slate-300"
+                                        : day.isCurrentMonth
+                                          ? "rounded-xl text-slate-700 hover:bg-sky-50 hover:text-sky-700"
+                                          : "rounded-xl text-slate-300 hover:bg-slate-50",
+                                  )}
+                                >
+                                  {day.date.getDate()}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ),
+                    )}
+                  </div>
+
+                  {selectedAvailabilityBlockDates.length > 0 ? (
+                    <div className="mt-4 flex max-h-40 flex-wrap gap-2 overflow-y-auto border-t border-slate-100 pt-3 pr-1">
+                      {selectedAvailabilityBlockDates.map((date) => (
+                        <button
+                          key={date}
+                          type="button"
+                          onClick={() => toggleAvailabilityBlockDate(date)}
+                          className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700"
+                        >
+                          {formatAvailabilityDate(date)} x
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={clearAvailabilityBlockDates}
+                        className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                      >
+                        Clear all dates
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="space-y-2">
+                    <span className="text-sm font-semibold text-slate-900">
+                      Window
+                    </span>
+                    <DashboardSelect
+                      value={availabilityBlockWindow}
+                      onChange={(nextWindow) =>
+                        setAvailabilityBlockWindow(
+                          nextWindow as AvailabilityWindowKey,
+                        )
+                      }
+                      ariaLabel="Select blocked window"
+                      buttonClassName="bg-white"
+                      options={[
+                        ...AVAILABILITY_GROUPS.map((group) => ({
+                          value: `group:${group.id}`,
+                          label: group.label,
+                        })),
+                        ...AVAILABILITY_SLOTS.map((slot) => ({
+                          value: `slot:${slot.id}`,
+                          label: slot.label,
+                        })),
+                      ]}
+                    />
+                  </label>
+
+                  <label className="space-y-2">
+                    <span className="text-sm font-semibold text-slate-900">
+                      Type
+                    </span>
+                    <DashboardSelect
+                      value={availabilityBlockType}
+                      onChange={(nextType) =>
+                        setAvailabilityBlockType(
+                          nextType as Exclude<
+                            AvailabilityBlockType,
+                            "scheduled_job"
+                          >,
+                        )
+                      }
+                      ariaLabel="Select block type"
+                      buttonClassName="bg-white"
+                      options={[
+                        { value: "closed", label: "Closed" },
+                        {
+                          value: "manual_hold",
+                          label: "Manual booking / hold",
+                        },
+                      ]}
+                    />
+                  </label>
+                </div>
+
+                <label className="space-y-2">
+                  <span className="text-sm font-semibold text-slate-900">
+                    Reason
+                    <span className="ml-2 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
+                      Optional
+                    </span>
+                  </span>
+                  <input
+                    type="text"
+                    value={availabilityBlockReason}
+                    onChange={(event) =>
+                      setAvailabilityBlockReason(event.target.value)
+                    }
+                    placeholder="Fully booked, no mechanic cover, holiday..."
+                    className="min-h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                  />
+                </label>
+
+                {availabilityBlockError ? (
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {availabilityBlockError}
+                  </div>
+                ) : null}
+
+                <button
+                  type="submit"
+                  disabled={isSavingAvailabilityBlock}
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:bg-slate-200 disabled:text-slate-500"
+                >
+                  {isSavingAvailabilityBlock ? (
+                    <>
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                      Saving block...
+                    </>
+                  ) : (
+                    `Block ${selectedAvailabilityBlockDates.length || 0} ${
+                      selectedAvailabilityBlockDates.length === 1
+                        ? "date"
+                        : "dates"
+                    }`
+                  )}
+                </button>
+              </form>
+
+              <div className="mt-5 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    Upcoming manual blocks
+                  </p>
+                  {availabilityBlocks.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleRemoveAllAvailabilityBlocks()}
+                      disabled={
+                        isRemovingAllAvailabilityBlocks ||
+                        Boolean(removingAvailabilityBlockId)
+                      }
+                      className="rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isRemovingAllAvailabilityBlocks
+                        ? "Removing all"
+                        : `Remove all (${availabilityBlocks.length})`}
+                    </button>
+                  ) : null}
+                </div>
+                {availabilityBlocks.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-5 text-sm text-slate-500">
+                    No manual closures or holds in the next 45 days.
+                  </div>
+                ) : (
+                  <div className="grid max-h-96 gap-2 overflow-y-auto pr-1">
+                    {availabilityBlocks.map((block) => (
+                      <div
+                        key={block.id}
+                        className="rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-950">
+                              {formatBlockWindow(block)}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {getBlockTypeLabel(block.block_type)}
+                              {block.reason ? ` - ${block.reason}` : ""}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void handleRemoveAvailabilityBlock(block.id)
+                            }
+                            disabled={
+                              removingAvailabilityBlockId === block.id ||
+                              isRemovingAllAvailabilityBlocks
+                            }
+                            className="shrink-0 rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50"
+                          >
+                            {removingAvailabilityBlockId === block.id
+                              ? "Removing"
+                              : "Remove"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
 
             {latestAssignment ? (
               <div className="mt-6 rounded-3xl border border-emerald-200 bg-emerald-50 p-5">

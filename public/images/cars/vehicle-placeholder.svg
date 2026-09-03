@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title description">
+  <title id="title">Vehicle image coming soon</title>
+  <desc id="description">STM Motors vehicle listing placeholder</desc>
+  <defs>
+    <linearGradient id="background" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#eaf2ff"/>
+      <stop offset="1" stop-color="#cbdcf5"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="url(#background)"/>
+  <path d="M287 493h626l-54-140c-13-34-46-56-82-56H446c-39 0-74 24-87 61l-72 135Z" fill="#1c69d4" opacity=".86"/>
+  <rect x="238" y="467" width="724" height="142" rx="46" fill="#0f172a"/>
+  <circle cx="386" cy="610" r="72" fill="#f8fafc" stroke="#0f172a" stroke-width="34"/>
+  <circle cx="814" cy="610" r="72" fill="#f8fafc" stroke="#0f172a" stroke-width="34"/>
+  <path d="M443 337h326c20 0 38 12 46 30l38 91H365l43-92c7-18 21-29 35-29Z" fill="#f8fafc" opacity=".82"/>
+  <text x="600" y="710" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#0f172a">IMAGE COMING SOON</text>
+</svg>

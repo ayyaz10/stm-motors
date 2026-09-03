@@ -18,6 +18,7 @@ import {
   type DerivedJobProgressStatus,
   type OpsJobProgressBoardItem,
 } from "../lib/jobWorkflow";
+import DashboardSelect from "../components/dashboard/DashboardSelect";
 
 interface OpsJobProgressPageProps {
   onBackToDashboard?: () => void;
@@ -605,36 +606,36 @@ function OpsJobProgressPage({
 
               <label className="flex flex-col gap-2 text-sm font-semibold text-slate-900">
                 Filter status
-                <select
+                <DashboardSelect
                   value={statusFilter}
-                  onChange={(event) =>
-                    setStatusFilter(event.target.value as DerivedJobProgressStatus | "all")
+                  onChange={(nextStatus) =>
+                    setStatusFilter(nextStatus as DerivedJobProgressStatus | "all")
                   }
-                  className="min-h-11 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-100"
-                >
-                  <option value="all">All statuses</option>
-                  {Object.entries(statusMeta).map(([value, meta]) => (
-                    <option key={value} value={value}>
-                      {meta.label}
-                    </option>
-                  ))}
-                </select>
+                  ariaLabel="Filter jobs by status"
+                  options={[
+                    { value: "all", label: "All statuses" },
+                    ...Object.entries(statusMeta).map(([value, meta]) => ({
+                      value,
+                      label: meta.label,
+                    })),
+                  ]}
+                />
               </label>
 
               <label className="flex flex-col gap-2 text-sm font-semibold text-slate-900">
                 Filter mechanic
-                <select
+                <DashboardSelect
                   value={mechanicFilter}
-                  onChange={(event) => setMechanicFilter(event.target.value)}
-                  className="min-h-11 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-100"
-                >
-                  <option value="all">All mechanics</option>
-                  {mechanicOptions.map((mechanicName) => (
-                    <option key={mechanicName} value={mechanicName}>
-                      {mechanicName}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setMechanicFilter}
+                  ariaLabel="Filter jobs by mechanic"
+                  options={[
+                    { value: "all", label: "All mechanics" },
+                    ...mechanicOptions.map((mechanicName) => ({
+                      value: mechanicName,
+                      label: mechanicName,
+                    })),
+                  ]}
+                />
               </label>
 
               <label className="flex flex-col gap-2 text-sm font-semibold text-slate-900">

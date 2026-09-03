@@ -34,7 +34,7 @@ export async function fetchMechanicDashboardJobs(
   const { data: jobsData, error: jobsError } = await supabase
     .from("jobs")
     .select(
-      "id, booking_id, job_reference, status, booking_number_snapshot, car_registration_snapshot, vehicle_summary_snapshot, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, ops_notes, created_at, updated_at",
+      "id, booking_id, job_reference, status, booking_number_snapshot, car_registration_snapshot, vehicle_summary_snapshot, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, scheduled_arrival_window, ops_notes, created_at, updated_at",
     )
     .eq("assigned_mechanic_user_id", mechanicUserId)
     .order("created_at", { ascending: false });

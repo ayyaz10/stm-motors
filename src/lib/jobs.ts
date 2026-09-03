@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import type { BookingAvailabilityDay } from "./availability";
 
 export type JobStatus =
   | "unassigned"
@@ -8,6 +9,14 @@ export type JobStatus =
   | "completed"
   | "cancelled";
 
+export interface JobArrivalWindow {
+  source: "customer_availability" | "custom";
+  date: string;
+  start_time: string;
+  end_time: string | null;
+  label: string;
+}
+
 export interface CreateJobPayload {
   booking_id: string;
   status?: JobStatus;
@@ -15,6 +24,7 @@ export interface CreateJobPayload {
   assigned_mechanic_name?: string | null;
   assigned_mechanic_phone?: string | null;
   scheduled_for?: string | null;
+  scheduled_arrival_window?: JobArrivalWindow | null;
   ops_notes?: string | null;
 }
 
@@ -24,12 +34,18 @@ export interface UpdateJobPayload {
   assigned_mechanic_name?: string | null;
   assigned_mechanic_phone?: string | null;
   scheduled_for?: string | null;
+  scheduled_arrival_window?: JobArrivalWindow | null;
   ops_notes?: string | null;
 }
 
 export interface ReopenJobPayload {
   reason: string;
   reset_workflow?: boolean;
+}
+
+export interface ScheduleAssignedJobPayload {
+  scheduled_for: string;
+  scheduled_arrival_window: JobArrivalWindow;
 }
 
 export interface CreatedJob {
@@ -44,6 +60,7 @@ export interface CreatedJob {
   assigned_mechanic_name: string | null;
   assigned_mechanic_phone: string | null;
   scheduled_for: string | null;
+  scheduled_arrival_window: JobArrivalWindow | null;
   ops_notes: string | null;
   created_at: string;
   updated_at: string;
@@ -65,7 +82,13 @@ export interface BookingAssignmentCandidate {
   car_registration: string;
   created_at: string;
   total_price: number;
+  quoted_price: number | null;
+  pricing_type: "estimated" | "from" | null;
   selected_services: string[];
+  availability: BookingAvailabilityDay[];
+  availability_note: string | null;
+  work_notes: string | null;
+  vehicle_driveable: "yes" | "no" | null;
   existing_job: AssignmentCandidateJob | null;
 }
 
@@ -117,6 +140,7 @@ export async function createJob(
         assigned_mechanic_name: payload.assigned_mechanic_name ?? null,
         assigned_mechanic_phone: payload.assigned_mechanic_phone ?? null,
         scheduled_for: payload.scheduled_for ?? null,
+        scheduled_arrival_window: payload.scheduled_arrival_window ?? null,
         ops_notes: payload.ops_notes ?? null,
       },
     ])
@@ -142,7 +166,7 @@ export async function updateJob(
   jobId: string,
   payload: UpdateJobPayload,
 ): Promise<CreatedJob> {
-  const updatePayload: Record<string, string | null> = {};
+  const updatePayload: Record<string, unknown> = {};
 
   updatePayload.updated_at = new Date().toISOString();
 
@@ -165,6 +189,10 @@ export async function updateJob(
 
   if (payload.scheduled_for !== undefined) {
     updatePayload.scheduled_for = payload.scheduled_for;
+  }
+
+  if (payload.scheduled_arrival_window !== undefined) {
+    updatePayload.scheduled_arrival_window = payload.scheduled_arrival_window;
   }
 
   if (payload.ops_notes !== undefined) {
@@ -206,6 +234,27 @@ export async function reopenJobForOps(
   }
 
   return reopenedJob as CreatedJob;
+}
+
+export async function scheduleAssignedJob(
+  jobId: string,
+  payload: ScheduleAssignedJobPayload,
+): Promise<CreatedJob> {
+  const { data, error } = await supabase.rpc("schedule_assigned_job", {
+    p_job_id: jobId,
+    p_scheduled_for: payload.scheduled_for,
+    p_scheduled_arrival_window: payload.scheduled_arrival_window,
+  });
+
+  if (error) {
+    throw new Error(error.message || "Failed to schedule the assigned job.");
+  }
+
+  if (!data) {
+    throw new Error("Failed to schedule the assigned job.");
+  }
+
+  return data as CreatedJob;
 }
 
 export async function completeAssignedJob(jobId: string): Promise<void> {
@@ -276,7 +325,7 @@ export async function fetchBookingAssignmentCandidates(): Promise<
   const { data: bookings, error: bookingsError } = await supabase
     .from("bookings")
     .select(
-      "id, booking_number, full_name, phone, email, car_registration, created_at, total_price, selected_services",
+      "id, booking_number, full_name, phone, email, car_registration, created_at, total_price, quoted_price, pricing_type, selected_services, availability, availability_note, work_notes, vehicle_driveable",
     )
     .order("created_at", { ascending: false })
     .limit(50);
@@ -293,7 +342,7 @@ export async function fetchBookingAssignmentCandidates(): Promise<
   const { data: jobs, error: jobsError } = await supabase
     .from("jobs")
     .select(
-      "id, booking_id, job_reference, status, booking_number_snapshot, car_registration_snapshot, vehicle_summary_snapshot, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, ops_notes, created_at, updated_at",
+      "id, booking_id, job_reference, status, booking_number_snapshot, car_registration_snapshot, vehicle_summary_snapshot, assigned_mechanic_user_id, assigned_mechanic_name, assigned_mechanic_phone, scheduled_for, scheduled_arrival_window, ops_notes, created_at, updated_at",
     )
     .in("booking_id", bookingIds)
     .order("created_at", { ascending: false });
@@ -414,7 +463,14 @@ export async function fetchBookingAssignmentCandidates(): Promise<
     car_registration: booking.car_registration,
     created_at: booking.created_at,
     total_price: Number(booking.total_price),
+    quoted_price:
+      booking.quoted_price === null ? null : Number(booking.quoted_price),
+    pricing_type: booking.pricing_type,
     selected_services: booking.selected_services,
+    availability: (booking.availability ?? []) as BookingAvailabilityDay[],
+    availability_note: booking.availability_note,
+    work_notes: booking.work_notes,
+    vehicle_driveable: booking.vehicle_driveable,
     existing_job: jobsByBookingId.get(booking.id) ?? null,
   }));
 }

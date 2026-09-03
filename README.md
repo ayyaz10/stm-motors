@@ -1,4 +1,23 @@
-# React + TypeScript + Vite
+# STM Motors
+
+STM Motors is a React + TypeScript + Vite project with three hostname-selected applications:
+
+- `stmmotors.com`: public services and booking
+- `stmmotors.co.uk`: public vehicle marketplace
+- `staff.stmmotors.com`: central Admin, Ops and Mechanic portal
+
+Run the staff portal locally with `npm run dev:staff` and build its deployment with `npm run build:staff`. See [docs/staff-portal-deployment.md](/F:/git_repos/car/stm-autotrader/docs/staff-portal-deployment.md).
+
+## Booking Emails
+
+Booking confirmation emails now run through Supabase Edge Functions + Resend.
+
+See:
+
+- [docs/booking-email-notifications.md](/F:/git_repos/car/stm-autotrader/docs/booking-email-notifications.md)
+- [docs/contact-form-notifications.md](/F:/git_repos/car/stm-autotrader/docs/contact-form-notifications.md)
+
+## Frontend Commands
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

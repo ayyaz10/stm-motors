@@ -16,12 +16,15 @@ interface NumberPlateFormProps {
   goToPreviousStep: () => void;
 }
 
-const NumberPlateForm = ({
+const registrationErrorId = "registration-error";
+const postcodeErrorId = "plate-postcode-error";
+
+function NumberPlateForm({
   formData,
   setFormData,
   goToNextStep,
   goToPreviousStep,
-}: NumberPlateFormProps) => {
+}: NumberPlateFormProps) {
   const [errors, setErrors] = useState({
     registration: "",
     postcode: "",
@@ -35,18 +38,19 @@ const NumberPlateForm = ({
   const validateField = (name: string, value: string) => {
     if (name === "registration") {
       if (!value.trim()) {
-        return "Registration number is required";
+        return "Registration number is required.";
       }
+
       return "";
     }
 
     if (name === "postcode") {
       if (!value.trim()) {
-        return "Postcode is required";
+        return "Postcode is required.";
       }
 
       if (!validatePostcode(value)) {
-        return "Please enter a valid UK postcode (e.g., SW1A 1AA)";
+        return "Enter a valid UK postcode such as SW1A 1AA.";
       }
 
       return "";
@@ -55,8 +59,8 @@ const NumberPlateForm = ({
     return "";
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
 
     setFormData((prev) => ({
       ...prev,
@@ -71,8 +75,8 @@ const NumberPlateForm = ({
     }
   };
 
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
 
     setTouched((prev) => ({
       ...prev,
@@ -85,113 +89,114 @@ const NumberPlateForm = ({
     }));
   };
 
-  const isFormValid = () => {
-    return (
-      formData.registration.trim() !== "" &&
-      formData.postcode.trim() !== "" &&
-      validatePostcode(formData.postcode)
-    );
-  };
+  const isFormValid = () =>
+    formData.registration.trim() !== "" &&
+    formData.postcode.trim() !== "" &&
+    validatePostcode(formData.postcode);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
 
-    const newTouched = {
+    const nextTouched = {
       registration: true,
       postcode: true,
     };
 
-    const newErrors = {
+    const nextErrors = {
       registration: validateField("registration", formData.registration),
       postcode: validateField("postcode", formData.postcode),
     };
 
-    setTouched(newTouched);
-    setErrors(newErrors);
+    setTouched(nextTouched);
+    setErrors(nextErrors);
 
-    const hasErrors = Object.values(newErrors).some((error) => error !== "");
-
-    if (!hasErrors) {
+    if (!Object.values(nextErrors).some(Boolean)) {
       goToNextStep();
     }
   };
 
   return (
-    <div className="car-numberplate-form">
-      <form onSubmit={handleSubmit}>
-        <div className="space-y-4">
-          <div>
-            <input
-              className={`border px-2 py-2 w-full ${
-                touched.registration && errors.registration
-                  ? "border-red-600 bg-red-50"
-                  : touched.registration &&
-                      !errors.registration &&
-                      formData.registration
-                    ? "border-green-600 bg-green-50"
-                    : "border-amber-600"
-              }`}
-              type="text"
-              name="registration"
-              placeholder="Your registration number"
-              value={formData.registration}
-              onChange={handleChange}
-              onBlur={handleBlur}
-            />
-            {touched.registration && errors.registration && (
-              <p className="text-red-600 text-sm mt-1">{errors.registration}</p>
-            )}
-          </div>
+    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+      <div className="space-y-2">
+        <label className="public-label" htmlFor="registration">
+          Registration number
+        </label>
+        <input
+          id="registration"
+          className="public-input"
+          type="text"
+          name="registration"
+          inputMode="text"
+          autoCapitalize="characters"
+          autoComplete="off"
+          placeholder="AB12 CDE"
+          value={formData.registration}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          aria-invalid={Boolean(touched.registration && errors.registration)}
+          aria-describedby={
+            touched.registration && errors.registration ? registrationErrorId : undefined
+          }
+        />
+        <p className="text-sm text-[var(--public-muted)]">
+          Enter the registration you want us to use for your booking.
+        </p>
+        {touched.registration && errors.registration ? (
+          <p id={registrationErrorId} className="public-field-error">
+            {errors.registration}
+          </p>
+        ) : null}
+      </div>
 
-          <div>
-            <input
-              className={`border px-2 py-2 w-full ${
-                touched.postcode && errors.postcode
-                  ? "border-red-600 bg-red-50"
-                  : touched.postcode && !errors.postcode && formData.postcode
-                    ? "border-green-600 bg-green-50"
-                    : "border-amber-600"
-              }`}
-              type="text"
-              name="postcode"
-              placeholder="Your postcode"
-              value={formData.postcode}
-              onChange={handleChange}
-              onBlur={handleBlur}
-            />
-            {touched.postcode && errors.postcode && (
-              <p className="text-red-600 text-sm mt-1">{errors.postcode}</p>
-            )}
-            {touched.postcode && !errors.postcode && formData.postcode && (
-              <p className="text-green-600 text-sm mt-1">✓ Valid postcode</p>
-            )}
-          </div>
+      <div className="space-y-2">
+        <label className="public-label" htmlFor="plate-postcode">
+          Postcode
+        </label>
+        <input
+          id="plate-postcode"
+          className="public-input"
+          type="text"
+          name="postcode"
+          inputMode="text"
+          autoComplete="postal-code"
+          placeholder="SW1A 1AA"
+          value={formData.postcode}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          aria-invalid={Boolean(touched.postcode && errors.postcode)}
+          aria-describedby={
+            touched.postcode && errors.postcode ? postcodeErrorId : undefined
+          }
+        />
+        <p className="text-sm text-[var(--public-muted)]">
+          We use your postcode to confirm local availability and pricing.
+        </p>
+        {touched.postcode && errors.postcode ? (
+          <p id={postcodeErrorId} className="public-field-error">
+            {errors.postcode}
+          </p>
+        ) : null}
+      </div>
 
-          <div className="flex justify-between">
-            <button
-              type="button"
-              onClick={goToPreviousStep}
-              className="bg-gray-400 font-semibold text-sm px-8 py-2 my-4 cursor-pointer"
-            >
-              Previous
-            </button>
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={goToPreviousStep}
+          className="public-btn-secondary w-full"
+        >
+          Previous
+        </button>
 
-            <button
-              className={`font-semibold text-sm px-8 py-2 my-4 cursor-pointer ${
-                isFormValid()
-                  ? "bg-green-400 hover:bg-green-500"
-                  : "bg-gray-300 cursor-not-allowed"
-              }`}
-              type="submit"
-              disabled={!isFormValid()}
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
+        <button
+          className="public-btn-primary w-full"
+          type="submit"
+          disabled={!isFormValid()}
+        >
+          Continue
+        </button>
+      </div>
+    </form>
   );
-};
+}
 
 export default NumberPlateForm;

@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import StaffSessionStatus from "./components/auth/StaffSessionStatus";
+import StaffPortalRedirect from "./components/auth/StaffPortalRedirect";
+import PublicLayout from "./components/public/PublicLayout";
+import ServiceDetailPage from "./components/public/ServiceDetailPage";
+import { findLegalPageByPath } from "./data/legalPages";
 import {
   getCurrentSession,
   getStaffProfile,
@@ -9,20 +13,75 @@ import {
   type StaffProfile,
   type StaffRole,
 } from "./lib/auth";
+import { navigateTo } from "./lib/navigation";
+import { mapLegacyStaffPath } from "./lib/staffPortal";
+import AboutPage from "./pages/AboutPage";
 import CarSelectionPage from "./pages/CarSelectionPage";
+import ContactPage from "./pages/ContactPage";
+import HomePage from "./pages/HomePage";
+import HeroPreviewPage from "./pages/HeroPreviewPage";
 import MechanicDashboardPage from "./pages/MechanicDashboardPage";
+import MechanicApplicationPage from "./pages/MechanicApplicationPage";
 import MechanicJobOverviewPage from "./pages/MechanicJobOverviewPage";
 import OpsAssignJobPage from "./pages/OpsAssignJobPage";
+import OpsMechanicApplicationsPage from "./pages/OpsMechanicApplicationsPage";
 import OpsJobProgressPage from "./pages/OpsJobProgressPage";
 import ServiceChecklistPage from "./pages/ServiceChecklistPage";
+import ServicesPage from "./pages/ServicesPage";
 import StaffLoginPage from "./pages/StaffLoginPage";
+import TermsPage from "./pages/TermsPage";
 import VehicleCheckInPage from "./pages/VehicleCheckInPage";
+import { findServicePageByPath } from "./data/servicePages";
 import "./App.css";
 
-const CAR_SELECTION_ROUTE = "/carselection";
+function MarketplaceDomainRedirect() {
+  const isLocalPreview =
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1" ||
+    window.location.hostname === "[::1]";
+  const redirectTarget = isLocalPreview ? "/cars" : "https://stmmotors.co.uk";
+
+  useEffect(() => {
+    window.location.replace(redirectTarget);
+  }, [redirectTarget]);
+
+  return (
+    <main className="flex min-h-[70vh] items-center justify-center bg-slate-50 px-6 text-center">
+      <div>
+        <h1 className="text-3xl font-bold text-slate-950">
+          STM Motors vehicle marketplace has moved
+        </h1>
+        <p className="mt-3 text-slate-600">
+          {isLocalPreview
+            ? "Opening the local vehicle marketplace."
+            : "Redirecting you to stmmotors.co.uk."}
+        </p>
+        <a
+          href={redirectTarget}
+          className="mt-6 inline-flex rounded-xl bg-[#1c69d4] px-5 py-3 font-semibold text-white"
+        >
+          Open vehicle marketplace
+        </a>
+      </div>
+    </main>
+  );
+}
+
+const HOME_ROUTE = "/";
+const HERO_PREVIEW_ROUTE = "/hero-preview";
+const SERVICES_ROUTE = "/services";
+const ABOUT_ROUTE = "/about";
+const CONTACT_ROUTE = "/contact";
+const CARS_FOR_SALE_ROUTE = "/cars-for-sale";
+const LEGAL_HUB_ROUTE = "/legal";
+const TERMS_ROUTE = "/terms";
+const BOOK_ROUTE = "/book";
+const MECHANIC_APPLY_ROUTE = "/mechanic/apply";
+const LEGACY_CAR_SELECTION_ROUTE = "/carselection";
 const STAFF_LOGIN_ROUTE = "/staff/login";
 const OPS_ASSIGN_JOB_ROUTE = "/ops/jobs";
 const OPS_JOB_PROGRESS_ROUTE = "/ops/job-progress";
+const OPS_MECHANIC_APPLICATIONS_ROUTE = "/ops/mechanic-applications";
 const MECHANIC_DASHBOARD_ROUTE = "/mechanic/jobs";
 const MECHANIC_JOB_OVERVIEW_ROUTE = "/mechanic/job-overview";
 const MECHANIC_SERVICE_CHECKLIST_ROUTE = "/mechanic/service-checklist";
@@ -31,18 +90,25 @@ const OPS_ALLOWED_ROLES: StaffRole[] = ["ops", "admin"];
 const MECHANIC_ALLOWED_ROLES: StaffRole[] = ["mechanic", "admin"];
 const JOB_OVERVIEW_ALLOWED_ROLES: StaffRole[] = ["mechanic", "ops", "admin"];
 const WORKFLOW_REVIEW_ALLOWED_ROLES: StaffRole[] = ["mechanic", "ops", "admin"];
-
-function navigateTo(path: string, replace = false) {
-  const nextMethod = replace ? "replaceState" : "pushState";
-
-  window.history[nextMethod](null, "", path);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
+const PUBLIC_ROUTES = new Set([
+  HOME_ROUTE,
+  HERO_PREVIEW_ROUTE,
+  SERVICES_ROUTE,
+  ABOUT_ROUTE,
+  CONTACT_ROUTE,
+  CARS_FOR_SALE_ROUTE,
+  LEGAL_HUB_ROUTE,
+  TERMS_ROUTE,
+  BOOK_ROUTE,
+  MECHANIC_APPLY_ROUTE,
+  LEGACY_CAR_SELECTION_ROUTE,
+]);
 
 function App() {
   const [locationState, setLocationState] = useState({
     pathname: window.location.pathname,
     search: window.location.search,
+    hash: window.location.hash,
   });
   const [staffSession, setStaffSession] = useState<Session | null>(null);
   const [staffProfile, setStaffProfile] = useState<StaffProfile | null>(null);
@@ -60,13 +126,14 @@ function App() {
       setLocationState({
         pathname: window.location.pathname,
         search: window.location.search,
+        hash: window.location.hash,
       });
     };
 
     window.addEventListener("popstate", handleLocationChange);
 
-    if (window.location.pathname === "/") {
-      navigateTo(CAR_SELECTION_ROUTE, true);
+    if (window.location.pathname === LEGACY_CAR_SELECTION_ROUTE) {
+      navigateTo(BOOK_ROUTE, true);
     }
 
     return () => {
@@ -213,7 +280,7 @@ function App() {
           </button>
           <button
             type="button"
-            onClick={() => navigateTo(CAR_SELECTION_ROUTE)}
+            onClick={() => navigateTo(BOOK_ROUTE)}
             className="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700"
           >
             Open customer flow
@@ -267,8 +334,11 @@ function App() {
     return content;
   };
 
-  const { pathname, search } = locationState;
+  const { pathname, search, hash } = locationState;
+  const matchedServicePage = findServicePageByPath(pathname);
+  const matchedLegalPage = findLegalPageByPath(pathname);
   const searchParams = new URLSearchParams(search);
+  const legacyStaffPath = mapLegacyStaffPath(pathname);
   const overviewSource = searchParams.get("source");
   const isWorkflowReviewOnly = staffProfile?.role !== "mechanic";
   const signedInStaffDisplayName =
@@ -277,16 +347,49 @@ function App() {
     "Staff user";
   let pageContent: ReactNode;
 
-  if (pathname === CAR_SELECTION_ROUTE) {
+  if (pathname === HOME_ROUTE) {
+    pageContent = <HomePage />;
+  } else if (pathname === HERO_PREVIEW_ROUTE) {
+    pageContent = <HeroPreviewPage />;
+  } else if (matchedServicePage) {
+    pageContent = <ServiceDetailPage servicePage={matchedServicePage} />;
+  } else if (pathname === SERVICES_ROUTE) {
+    pageContent = <ServicesPage />;
+  } else if (pathname === ABOUT_ROUTE) {
+    pageContent = <AboutPage />;
+  } else if (pathname === CONTACT_ROUTE) {
+    pageContent = <ContactPage />;
+  } else if (pathname === CARS_FOR_SALE_ROUTE) {
+    pageContent = <MarketplaceDomainRedirect />;
+  } else if (
+    pathname === LEGAL_HUB_ROUTE ||
+    pathname === TERMS_ROUTE ||
+    matchedLegalPage
+  ) {
+    pageContent = (
+      <TermsPage
+        currentPathname={pathname}
+        currentHash={hash}
+        legacySectionId={matchedLegalPage?.id ?? null}
+      />
+    );
+  } else if (pathname === BOOK_ROUTE || pathname === LEGACY_CAR_SELECTION_ROUTE) {
     pageContent = <CarSelectionPage />;
+  } else if (pathname === MECHANIC_APPLY_ROUTE) {
+    pageContent = <MechanicApplicationPage />;
+  } else if (legacyStaffPath) {
+    pageContent = <StaffPortalRedirect pathname={pathname} search={search} />;
   } else if (pathname === STAFF_LOGIN_ROUTE) {
     pageContent = (
       <StaffLoginPage
         session={staffSession}
         profile={staffProfile}
         isProfileLoading={isStaffProfileLoading}
-        onBackToCustomer={() => navigateTo(CAR_SELECTION_ROUTE)}
+        onBackToCustomer={() => navigateTo(HOME_ROUTE)}
         onOpenOpsJobs={() => navigateTo(OPS_ASSIGN_JOB_ROUTE)}
+        onOpenMechanicApplications={() =>
+          navigateTo(OPS_MECHANIC_APPLICATIONS_ROUTE)
+        }
         onOpenMechanicDashboard={() => navigateTo(MECHANIC_DASHBOARD_ROUTE)}
       />
     );
@@ -315,7 +418,7 @@ function App() {
     pageContent = renderProtectedPage(
       OPS_ALLOWED_ROLES,
       <OpsJobProgressPage
-        onBackToDashboard={() => navigateTo(CAR_SELECTION_ROUTE)}
+        onBackToDashboard={() => navigateTo(HOME_ROUTE)}
         onOpenJobOverview={(job, booking) => {
           const nextSearchParams = new URLSearchParams({
             jobId: job.id,
@@ -353,6 +456,13 @@ function App() {
 
           navigateTo(`${VEHICLE_CHECK_IN_ROUTE}?${nextSearchParams.toString()}`);
         }}
+      />,
+    );
+  } else if (pathname === OPS_MECHANIC_APPLICATIONS_ROUTE) {
+    pageContent = renderProtectedPage(
+      OPS_ALLOWED_ROLES,
+      <OpsMechanicApplicationsPage
+        onBackToOpsDashboard={() => navigateTo(OPS_ASSIGN_JOB_ROUTE)}
       />,
     );
   } else if (pathname === MECHANIC_DASHBOARD_ROUTE) {
@@ -488,10 +598,10 @@ function App() {
           <div className="mt-5 flex flex-col gap-3">
             <button
               type="button"
-              onClick={() => navigateTo(CAR_SELECTION_ROUTE)}
+              onClick={() => navigateTo(HOME_ROUTE)}
               className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white"
             >
-              Go to Car Selection
+              Go to Homepage
             </button>
             <button
               type="button"
@@ -521,21 +631,42 @@ function App() {
             >
               Go to Job Progress
             </button>
+            <button
+              type="button"
+              onClick={() => navigateTo(OPS_MECHANIC_APPLICATIONS_ROUTE)}
+              className="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700"
+            >
+              Review mechanic applications
+            </button>
           </div>
         </div>
       </main>
     );
   }
 
+  const shouldUsePublicLayout =
+    PUBLIC_ROUTES.has(pathname) ||
+    Boolean(matchedServicePage) ||
+    Boolean(matchedLegalPage);
+  const renderedPageContent = shouldUsePublicLayout ? (
+    <PublicLayout key={pathname} currentPath={pathname}>
+      {pageContent}
+    </PublicLayout>
+  ) : (
+    pageContent
+  );
+
   return (
     <>
-      {pageContent}
-      <StaffSessionStatus
-        session={staffSession}
-        profile={staffProfile}
-        isLoading={isStaffSessionLoading || isStaffProfileLoading}
-        error={staffSessionError ?? staffProfileError}
-      />
+      {renderedPageContent}
+      {import.meta.env.DEV && !shouldUsePublicLayout ? (
+        <StaffSessionStatus
+          session={staffSession}
+          profile={staffProfile}
+          isLoading={isStaffSessionLoading || isStaffProfileLoading}
+          error={staffSessionError ?? staffProfileError}
+        />
+      ) : null}
     </>
   );
 }

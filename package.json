@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:marketplace": "vite --mode marketplace",
+    "dev:staff": "vite --mode staff",
     "build": "tsc -b && vite build",
+    "build:staff": "tsc -b && vite build --mode staff",
     "lint": "eslint .",
     "preview": "vite preview",
     "generate:vehicle-catalog": "node scripts/generate-uk-vehicle-catalog.mjs",

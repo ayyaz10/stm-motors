@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
+  CalendarDays,
   CarFront,
   ChevronLeft,
   ChevronRight,
+  CheckCircle2,
   LoaderCircle,
   NotebookPen,
   Phone,
@@ -18,6 +20,15 @@ import {
 import { ensureBookingCoordinates } from "../lib/bookingLocation";
 import { canViewJobLocation } from "../lib/jobProgress";
 import MechanicLocationCard from "../components/mechanic/MechanicLocationCard";
+import {
+  buildAvailabilityScheduleOptions,
+  doAvailabilityWindowsOverlap,
+  formatAvailabilityDaySummary,
+  type AvailabilityBlock,
+  type AvailabilityScheduleOption,
+} from "../lib/availability";
+import { fetchPublicUnavailableWindows } from "../lib/availabilityBlocks";
+import { scheduleAssignedJob, type JobArrivalWindow } from "../lib/jobs";
 
 interface MechanicJobOverviewPageProps {
   jobId?: string;
@@ -37,6 +48,40 @@ function formatDateTime(value: string | null): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function formatArrivalWindow(
+  window: { date: string; start_time: string; end_time: string | null } | null,
+  fallback: string | null,
+): string {
+  if (!window) {
+    return formatDateTime(fallback);
+  }
+
+  const dateLabel = new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+  }).format(new Date(`${window.date}T00:00:00`));
+  const timeLabel = window.end_time
+    ? `${window.start_time}-${window.end_time}`
+    : window.start_time;
+
+  return `${dateLabel}, ${timeLabel}`;
+}
+
+function buildScheduledForIso(option: AvailabilityScheduleOption): string {
+  return new Date(`${option.date}T${option.start_time}:00`).toISOString();
+}
+
+function buildJobArrivalWindow(
+  option: AvailabilityScheduleOption,
+): JobArrivalWindow {
+  return {
+    source: option.source,
+    date: option.date,
+    start_time: option.start_time,
+    end_time: option.end_time,
+    label: option.label,
+  };
 }
 
 const checkInPhotoLabels = [
@@ -65,6 +110,9 @@ function MechanicJobOverviewPage({
   const [isRefreshingLocation, setIsRefreshingLocation] = useState(false);
   const [hasAttemptedLocationRefresh, setHasAttemptedLocationRefresh] =
     useState(false);
+  const [blockedWindows, setBlockedWindows] = useState<AvailabilityBlock[]>([]);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [isScheduleSaving, setIsScheduleSaving] = useState(false);
 
   const reference = useMemo(
     () => jobId?.trim() || jobReference?.trim() || "",
@@ -101,6 +149,51 @@ function MechanicJobOverviewPage({
   useEffect(() => {
     void loadWorkflow();
   }, [loadWorkflow]);
+
+  const scheduleOptions = useMemo(
+    () => buildAvailabilityScheduleOptions(workflow?.booking.availability ?? []),
+    [workflow?.booking.availability],
+  );
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadBlockedWindows = async () => {
+      if (!workflow || workflow.booking.availability.length === 0) {
+        setBlockedWindows([]);
+        return;
+      }
+
+      const dates = workflow.booking.availability.map((day) => day.date).sort();
+      const startDate = dates[0];
+      const endDate = dates[dates.length - 1];
+
+      try {
+        const windows = await fetchPublicUnavailableWindows(startDate, endDate);
+
+        if (isActive) {
+          setBlockedWindows(
+            windows.filter((window) => window.source_job_id !== workflow.job.id),
+          );
+        }
+      } catch (error) {
+        if (isActive) {
+          setBlockedWindows([]);
+          setScheduleError(
+            error instanceof Error
+              ? error.message
+              : "Unable to check booked arrival windows.",
+          );
+        }
+      }
+    };
+
+    void loadBlockedWindows();
+
+    return () => {
+      isActive = false;
+    };
+  }, [workflow]);
 
   const handleRefreshLocation = useCallback(
     async (markAttempted = false) => {
@@ -142,6 +235,43 @@ function MechanicJobOverviewPage({
     },
     [isRefreshingLocation, reference, workflow],
   );
+
+  const handleScheduleJob = async (option: AvailabilityScheduleOption) => {
+    if (!workflow || isScheduleSaving) {
+      return;
+    }
+
+    try {
+      setIsScheduleSaving(true);
+      setScheduleError(null);
+
+      const updatedJob = await scheduleAssignedJob(workflow.job.id, {
+        scheduled_for: buildScheduledForIso(option),
+        scheduled_arrival_window: buildJobArrivalWindow(option),
+      });
+
+      setWorkflow((currentWorkflow) =>
+        currentWorkflow
+          ? {
+              ...currentWorkflow,
+              job: updatedJob,
+              progressStatus:
+                currentWorkflow.progressStatus === "assigned"
+                  ? "scheduled"
+                  : currentWorkflow.progressStatus,
+            }
+          : currentWorkflow,
+      );
+    } catch (error) {
+      setScheduleError(
+        error instanceof Error
+          ? error.message
+          : "Unable to schedule this job.",
+      );
+    } finally {
+      setIsScheduleSaving(false);
+    }
+  };
 
   useEffect(() => {
     if (!workflow || isRefreshingLocation || hasAttemptedLocationRefresh) {
@@ -287,6 +417,12 @@ function MechanicJobOverviewPage({
     ]
       .filter(Boolean)
       .join(" ");
+  const hasConfirmedSchedule = Boolean(workflow.job.scheduled_for);
+  const canScheduleJob =
+    !isReviewMode &&
+    !isWorkflowReadOnly &&
+    !isJobClosed &&
+    !workflow.checkIn.isSubmitted;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.08),_transparent_28%),linear-gradient(180deg,_#f8fafc_0%,_#edf4f1_100%)] px-4 py-6 sm:px-6 sm:py-8">
@@ -316,6 +452,144 @@ function MechanicJobOverviewPage({
 
         <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
           <section className="space-y-5">
+            {!isReviewMode ? (
+              <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.45)] sm:p-6">
+                <div className="flex items-start gap-4">
+                  <div className="rounded-2xl bg-sky-50 p-3 text-sky-700">
+                    <CalendarDays className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
+                      Arrival Window
+                    </p>
+                    <h2 className="mt-1 text-xl font-semibold text-slate-950">
+                      Choose schedule
+                    </h2>
+                    <p className="mt-2 text-sm text-slate-600">
+                      Pick the final arrival window from the customer&apos;s
+                      availability before starting the job.
+                    </p>
+                  </div>
+                </div>
+
+                {hasConfirmedSchedule ? (
+                  <div className="mt-5 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                      <div>
+                        <p className="font-semibold">
+                          Scheduled for{" "}
+                          {formatArrivalWindow(
+                            workflow.job.scheduled_arrival_window,
+                            workflow.job.scheduled_for,
+                          )}
+                        </p>
+                        {canScheduleJob ? (
+                          <p className="mt-1">
+                            You can choose another customer availability window
+                            below if this needs to change.
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-5 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-800">
+                    This job is assigned but not scheduled yet. Choose one of
+                    the customer&apos;s available windows.
+                  </div>
+                )}
+
+                <div className="mt-5">
+                  {workflow.booking.availability.length > 0 ? (
+                    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                        Customer availability
+                      </p>
+                      <div className="mt-3 space-y-2">
+                        {workflow.booking.availability.map((day) => (
+                          <p key={day.date} className="text-sm text-slate-600">
+                            <span className="font-semibold text-slate-900">
+                              {new Intl.DateTimeFormat("en-GB", {
+                                weekday: "short",
+                                day: "numeric",
+                                month: "short",
+                              }).format(new Date(`${day.date}T00:00:00`))}
+                            </span>
+                            {" - "}
+                            {formatAvailabilityDaySummary(day)}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-5 py-6 text-sm text-slate-500">
+                      No structured customer availability is attached to this
+                      booking. Ask Ops to confirm the schedule manually.
+                    </div>
+                  )}
+                </div>
+
+                {scheduleOptions.length > 0 ? (
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                    {scheduleOptions.map((option) => {
+                      const isSelected =
+                        workflow.job.scheduled_arrival_window?.date ===
+                          option.date &&
+                        workflow.job.scheduled_arrival_window?.start_time ===
+                          option.start_time &&
+                        workflow.job.scheduled_arrival_window?.end_time ===
+                          option.end_time;
+                      const isBlocked = blockedWindows.some((window) =>
+                        doAvailabilityWindowsOverlap(option, window),
+                      );
+
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => void handleScheduleJob(option)}
+                          disabled={
+                            !canScheduleJob || isBlocked || isScheduleSaving
+                          }
+                          className={`rounded-3xl border px-4 py-3 text-left transition ${
+                            isSelected
+                              ? "border-emerald-300 bg-emerald-50 ring-4 ring-emerald-100"
+                              : isBlocked
+                                ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                                : canScheduleJob
+                                  ? "border-slate-200 bg-white hover:border-sky-300 hover:bg-sky-50"
+                                  : "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400"
+                          }`}
+                        >
+                          <span className="block text-sm font-semibold text-slate-950">
+                            {option.dateLabel}
+                          </span>
+                          <span className="mt-1 block text-sm text-slate-600">
+                            {option.label}
+                          </span>
+                          <span className="mt-3 inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
+                            {option.start_time}-{option.end_time}
+                          </span>
+                          {isBlocked ? (
+                            <span className="mt-2 block text-xs font-semibold text-amber-700">
+                              Already booked or blocked
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+
+                {scheduleError ? (
+                  <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {scheduleError}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
             <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.45)] sm:p-6">
               <div className="flex items-start gap-4">
                 <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-700">
@@ -352,7 +626,10 @@ function MechanicJobOverviewPage({
                     Scheduled for
                   </p>
                   <p className="mt-2 text-base font-semibold text-slate-900">
-                    {formatDateTime(workflow.job.scheduled_for)}
+                    {formatArrivalWindow(
+                      workflow.job.scheduled_arrival_window,
+                      workflow.job.scheduled_for,
+                    )}
                   </p>
                   <p className="mt-1 text-sm text-slate-600">
                     Created {formatDateTime(workflow.job.created_at)}
@@ -565,6 +842,8 @@ function MechanicJobOverviewPage({
                       ? "This job is already closed, so the guided workflow is now read-only."
                       : workflow.checkIn.isSubmitted
                         ? "Check-in has already been submitted. Start will continue straight to the service checklist."
+                        : !hasConfirmedSchedule
+                          ? "Choose the final arrival window before starting the mechanic workflow."
                         : "Start opens the vehicle check-in first. Once that is submitted, the next step becomes the service checklist."}
                   </p>
                   {workflow.job.ops_notes?.trim() ? (
@@ -578,10 +857,18 @@ function MechanicJobOverviewPage({
                   <button
                     type="button"
                     onClick={() => onStart?.(nextStep)}
-                    disabled={isJobClosed || isWorkflowReadOnly}
+                    disabled={
+                      isJobClosed ||
+                      isWorkflowReadOnly ||
+                      (!hasConfirmedSchedule && !workflow.checkIn.isSubmitted)
+                    }
                     className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
                   >
-                    {isJobClosed ? "Job closed" : "Start"}
+                    {isJobClosed
+                      ? "Job closed"
+                      : hasConfirmedSchedule || workflow.checkIn.isSubmitted
+                        ? "Start"
+                        : "Schedule first"}
                     {!isJobClosed && !isWorkflowReadOnly ? (
                       <ChevronRight className="h-4 w-4" />
                     ) : null}

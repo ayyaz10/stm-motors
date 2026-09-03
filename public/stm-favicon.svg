@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title>STM Motors</title>
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#102033" />
+      <stop offset="58%" stop-color="#1d3557" />
+      <stop offset="100%" stop-color="#c47a45" />
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="58" fill="url(#g)" />
+  <circle cx="64" cy="64" r="50" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="4" />
+  <text
+    x="64"
+    y="72"
+    text-anchor="middle"
+    font-size="28"
+    font-family="Arial, sans-serif"
+    letter-spacing="8"
+    fill="#ffffff"
+  >
+    STM
+  </text>
+</svg>

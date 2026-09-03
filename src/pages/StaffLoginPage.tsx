@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type { StaffProfile } from "../lib/auth";
 import { signInStaffWithPassword, signOutStaff } from "../lib/auth";
+import { navigateTo } from "../lib/navigation";
 
 interface StaffLoginPageProps {
   session: Session | null;
@@ -9,6 +10,7 @@ interface StaffLoginPageProps {
   isProfileLoading: boolean;
   onBackToCustomer: () => void;
   onOpenOpsJobs: () => void;
+  onOpenMechanicApplications: () => void;
   onOpenMechanicDashboard: () => void;
 }
 
@@ -18,6 +20,7 @@ function StaffLoginPage({
   isProfileLoading,
   onBackToCustomer,
   onOpenOpsJobs,
+  onOpenMechanicApplications,
   onOpenMechanicDashboard,
 }: StaffLoginPageProps) {
   const [email, setEmail] = useState("");
@@ -81,7 +84,8 @@ function StaffLoginPage({
           Team sign-in
         </h1>
         <p className="mt-2 text-sm text-slate-600">
-          This page is for staff only. The customer booking flow stays public.
+          This page is for approved staff only. New mechanics should apply
+          first and wait for approval before logging in.
         </p>
 
         {session ? (
@@ -102,13 +106,22 @@ function StaffLoginPage({
             </p>
             <div className="mt-4 flex flex-col gap-3">
               {canOpenOpsJobs ? (
-                <button
-                  type="button"
-                  onClick={onOpenOpsJobs}
-                  className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white"
-                >
-                  Open ops jobs
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={onOpenOpsJobs}
+                    className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white"
+                  >
+                    Open ops jobs
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onOpenMechanicApplications}
+                    className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700"
+                  >
+                    Review mechanic applications
+                  </button>
+                </>
               ) : null}
               {canOpenMechanicDashboard ? (
                 <button
@@ -165,6 +178,14 @@ function StaffLoginPage({
               className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? "Signing in..." : "Staff sign in"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigateTo("/mechanic/apply")}
+              className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700"
+            >
+              Apply to be a mechanic
             </button>
           </form>
         )}

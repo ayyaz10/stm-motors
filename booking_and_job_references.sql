@@ -62,6 +62,7 @@ create table if not exists public.jobs (
   assigned_mechanic_name text,
   assigned_mechanic_phone text,
   scheduled_for timestamptz,
+  scheduled_arrival_window jsonb,
   created_at timestamptz not null default timezone('utc'::text, now()),
   updated_at timestamptz not null default timezone('utc'::text, now()),
   constraint jobs_status_check check (
@@ -77,6 +78,9 @@ alter table public.jobs
 
 alter table public.jobs
   add column if not exists vehicle_summary_snapshot text;
+
+alter table public.jobs
+  add column if not exists scheduled_arrival_window jsonb;
 
 update public.jobs
 set

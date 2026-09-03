@@ -5,6 +5,8 @@ alter table public.jobs
   add column if not exists reopened_by_user_id uuid references auth.users(id);
 alter table public.jobs
   add column if not exists reopen_reason text;
+alter table public.jobs
+  add column if not exists scheduled_arrival_window jsonb;
 
 drop policy if exists "Mechanics can update assigned jobs" on public.jobs;
 drop policy if exists "Ops and admins can update jobs" on public.jobs;
@@ -182,3 +184,64 @@ $$;
 
 revoke all on function public.reopen_job_for_ops(uuid, text, boolean) from public;
 grant execute on function public.reopen_job_for_ops(uuid, text, boolean) to authenticated;
+
+create or replace function public.schedule_assigned_job(
+  p_job_id uuid,
+  p_scheduled_for timestamptz,
+  p_scheduled_arrival_window jsonb
+)
+returns public.jobs
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_job public.jobs%rowtype;
+begin
+  if p_scheduled_for is null then
+    raise exception 'A scheduled time is required.';
+  end if;
+
+  if p_scheduled_arrival_window is null
+     or jsonb_typeof(p_scheduled_arrival_window) <> 'object'
+     or coalesce(p_scheduled_arrival_window->>'date', '') = ''
+     or coalesce(p_scheduled_arrival_window->>'start_time', '') = '' then
+    raise exception 'A scheduled arrival window is required.';
+  end if;
+
+  select *
+  into v_job
+  from public.jobs
+  where id = p_job_id
+    and assigned_mechanic_user_id = auth.uid();
+
+  if not found then
+    raise exception 'You can only schedule jobs assigned to you.';
+  end if;
+
+  if v_job.status in ('completed', 'cancelled') then
+    raise exception 'Closed jobs cannot be scheduled.';
+  end if;
+
+  update public.jobs
+  set
+    scheduled_for = p_scheduled_for,
+    scheduled_arrival_window = p_scheduled_arrival_window,
+    status = case
+      when status in ('assigned', 'scheduled') then 'scheduled'
+      else status
+    end,
+    updated_at = timezone('utc'::text, now())
+  where id = p_job_id
+  returning *
+  into v_job;
+
+  return v_job;
+end;
+$$;
+
+revoke all on function public.schedule_assigned_job(uuid, timestamptz, jsonb)
+from public;
+
+grant execute on function public.schedule_assigned_job(uuid, timestamptz, jsonb)
+to authenticated;

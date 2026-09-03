@@ -1,4 +1,4 @@
 export const appSettings = {
-  numberPlateEnabled: true,
+  numberPlateEnabled: false,
   carDetailsEnabled: true,
 };
