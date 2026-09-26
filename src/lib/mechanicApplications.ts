@@ -98,33 +98,18 @@ interface ApproveMechanicApplicationResponse {
   application: MechanicApplicationRow;
 }
 
+interface SubmitMechanicApplicationResponse {
+  application?: MechanicApplicationRow;
+  notificationSent?: boolean;
+  error?: string;
+}
+
 const mechanicApplicationSelect =
   "id, created_at, updated_at, submitted_at, status, first_name, last_name, email, phone, postcode, business_name, mechanic_type, years_experience, service_radius_miles, website_url, qualifications_summary, insurance_held, services_offered, work_types, has_diagnostic_tools, has_service_van, additional_notes, review_note, reviewed_at, approved_at, approved_by, auth_user_id, invite_sent_at";
 
 function trimOrNull(value: string): string | null {
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
-}
-
-function toOptionalInteger(value: string): number | null {
-  const trimmed = value.trim();
-
-  if (!trimmed) {
-    return null;
-  }
-
-  const numeric = Number.parseInt(trimmed, 10);
-  return Number.isFinite(numeric) ? numeric : null;
-}
-
-function normaliseStringArray(values: string[]): string[] {
-  return Array.from(
-    new Set(
-      values
-        .map((value) => value.trim())
-        .filter((value) => value.length > 0),
-    ),
-  );
 }
 
 function mapMechanicApplicationRecord(
@@ -164,77 +149,38 @@ function mapMechanicApplicationRecord(
 
 export async function submitMechanicApplication(
   input: MechanicApplicationInput,
+  captchaToken: string,
+  applicationId: string,
 ): Promise<MechanicApplicationRecord> {
   if (!input.mechanicType) {
     throw new Error("Choose a mechanic type before applying.");
   }
 
-  const nowIso = new Date().toISOString();
-  const applicationId = crypto.randomUUID();
-
-  const insertPayload = {
-    id: applicationId,
-    created_at: nowIso,
-    updated_at: nowIso,
-    submitted_at: nowIso,
-    status: "submitted" as const,
-    first_name: input.firstName.trim(),
-    last_name: input.lastName.trim(),
-    email: input.email.trim().toLowerCase(),
-    phone: input.phone.trim(),
-    postcode: input.postcode.trim().toUpperCase(),
-    business_name: trimOrNull(input.businessName),
-    mechanic_type: input.mechanicType,
-    years_experience: toOptionalInteger(input.yearsExperience),
-    service_radius_miles: toOptionalInteger(input.serviceRadiusMiles),
-    website_url: trimOrNull(input.websiteUrl),
-    qualifications_summary: trimOrNull(input.qualificationsSummary),
-    insurance_held: normaliseStringArray(input.insuranceHeld),
-    services_offered: normaliseStringArray(input.servicesOffered),
-    work_types: normaliseStringArray(input.workTypes),
-    has_diagnostic_tools: input.hasDiagnosticTools,
-    has_service_van: input.hasServiceVan,
-    additional_notes: trimOrNull(input.additionalNotes),
-  };
-
-  const { error } = await supabase
-    .from("mechanic_applications")
-    .insert(insertPayload);
+  const { data, error } = await supabase.functions.invoke<
+    SubmitMechanicApplicationResponse
+  >("submit-mechanic-application", {
+    body: { ...input, applicationId, captchaToken },
+  });
 
   if (error) {
+    const responseContext = (error as { context?: Response }).context;
+    if (responseContext) {
+      let response: SubmitMechanicApplicationResponse | null = null;
+      try {
+        response = (await responseContext.clone().json()) as SubmitMechanicApplicationResponse;
+      } catch {
+        // Use the function client error when no JSON response body is available.
+      }
+      if (response?.error) throw new Error(response.error);
+    }
     throw new Error(error.message || "Failed to submit the application.");
   }
 
-  return mapMechanicApplicationRecord({
-    id: applicationId,
-    created_at: nowIso,
-    updated_at: nowIso,
-    submitted_at: nowIso,
-    status: "submitted",
-    first_name: input.firstName.trim(),
-    last_name: input.lastName.trim(),
-    email: input.email.trim().toLowerCase(),
-    phone: input.phone.trim(),
-    postcode: input.postcode.trim().toUpperCase(),
-    business_name: trimOrNull(input.businessName),
-    mechanic_type: input.mechanicType,
-    years_experience: toOptionalInteger(input.yearsExperience),
-    service_radius_miles: toOptionalInteger(input.serviceRadiusMiles),
-    website_url: trimOrNull(input.websiteUrl),
-    qualifications_summary: trimOrNull(input.qualificationsSummary),
-    insurance_held: normaliseStringArray(input.insuranceHeld),
-    services_offered: normaliseStringArray(input.servicesOffered),
-    work_types: normaliseStringArray(input.workTypes),
-    has_diagnostic_tools: input.hasDiagnosticTools,
-    has_service_van: input.hasServiceVan,
-    additional_notes: trimOrNull(input.additionalNotes),
-    review_note: null,
-    reviewed_at: null,
-    approved_at: null,
-    approved_by: null,
-    auth_user_id: null,
-    invite_sent_at: null,
-  });
+  if (!data?.application) {
+    throw new Error(data?.error || "Application submission returned no record.");
+  }
+
+  return mapMechanicApplicationRecord(data.application);
 }
 
 export async function fetchMechanicApplications(): Promise<
@@ -253,6 +199,27 @@ export async function fetchMechanicApplications(): Promise<
   }
 
   return (data ?? []).map(mapMechanicApplicationRecord);
+}
+
+export async function deleteMechanicApplication(
+  applicationId: string,
+): Promise<void> {
+  const { error, count } = await supabase
+    .from("mechanic_applications")
+    .delete({ count: "exact" })
+    .eq("id", applicationId)
+    .neq("status", "approved")
+    .is("auth_user_id", null);
+
+  if (error) {
+    throw new Error(error.message || "Failed to delete the application.");
+  }
+
+  if (!count) {
+    throw new Error(
+      "This application cannot be deleted because it is approved, linked to a staff account, or no longer exists.",
+    );
+  }
 }
 
 export async function updateMechanicApplicationReview(input: {

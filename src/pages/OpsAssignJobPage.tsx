@@ -781,6 +781,12 @@ function OpsAssignJobPage({
       return;
     }
 
+    const confirmed = window.confirm(
+      `Remove this job and return booking ${booking.booking_number} to the unassigned pool?\n\nOnly use this for test or incorrectly created jobs. This cannot be undone.`,
+    );
+
+    if (!confirmed) return;
+
     try {
       setUnassigningJobId(booking.existing_job.id);
       setSubmitError(null);

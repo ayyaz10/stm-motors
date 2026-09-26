@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import GoogleRecaptchaField from "../components/forms/GoogleRecaptchaField";
+import ConsentAwareGoogleMap from "../components/privacy/ConsentAwareGoogleMap";
 import {
   findDealershipVehicle,
   type DealershipVehicle,
@@ -19,8 +20,11 @@ import {
   type ContactEnquiryType,
 } from "../lib/contactEnquiries";
 import { usePageMetadata } from "../lib/seo";
+import { trackAnalyticsEvent, trackGoogleAdsConversion } from "../lib/googleTracking";
 
 const availableServices = servicePages.map((service) => service.title);
+const googleMapsEmbedUrl =
+  "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2661.1389732488424!2d-3.1567039228756224!3d56.12442366330628!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x4887b50f557b0ce7%3A0x170bbdf9d11c4e4f!2s26%20Melville%20Brodie%20Gdns%2C%20Kirkcaldy%20KY1%202FN!5e1!3m2!1sen!2suk!4v1788469814514!5m2!1sen!2suk";
 
 const enquiryTypeOptions = [
   { value: "general", label: "General Enquiry" },
@@ -103,6 +107,7 @@ function ContactPage() {
     typeof __STM_RECAPTCHA_SITE_KEY__ === "string"
       ? __STM_RECAPTCHA_SITE_KEY__.trim()
       : "";
+  const [addressLine1, ...addressDetails] = contactDetails.address.split(", ");
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -133,6 +138,8 @@ function ContactPage() {
       setWebsite("");
       setCaptchaToken("");
       setCaptchaResetCounter((current) => current + 1);
+      trackAnalyticsEvent("contact_submitted", { source: "service" });
+      trackGoogleAdsConversion("contact");
     } catch (error) {
       setSubmissionError(
         error instanceof Error
@@ -161,8 +168,8 @@ function ContactPage() {
     {
       icon: MapPin,
       title: "Address",
-      content: "123 Workshop Lane",
-      subtext: "Motor City, MC1 2AB",
+      content: addressLine1,
+      subtext: addressDetails.join(", "),
     },
     {
       icon: Clock,
@@ -417,15 +424,7 @@ function ContactPage() {
 
               <div className="space-y-6">
                 <div className="bg-white rounded-xl p-2 shadow-sm border border-blue-100">
-                  <div className="bg-blue-50 rounded-lg h-64 lg:h-80 flex items-center justify-center">
-                    <div className="text-center">
-                      <MapPin className="w-12 h-12 text-blue-300 mx-auto mb-3" />
-                      <p className="text-slate-500 font-medium">Map Location</p>
-                      <p className="text-slate-400 text-sm">
-                        123 Workshop Lane, Motor City
-                      </p>
-                    </div>
-                  </div>
+                  <ConsentAwareGoogleMap address={contactDetails.address} embedUrl={googleMapsEmbedUrl} />
                 </div>
 
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-blue-100">

@@ -18,8 +18,8 @@ This repository now sends booking emails through a Supabase Edge Function backed
   Uses a stable idempotency key while a booking submission is in flight or retried.
 - `src/lib/bookingServiceCatalog.ts`
   Trusted service pricing used for booking validation.
-- `src/lib/formSubmit.ts`
-  Booking FormSubmit logic removed. Mechanic application FormSubmit remains untouched.
+- Mechanic application notifications now use the same server-side Resend setup;
+  the legacy browser-side FormSubmit integration has been removed.
 - `.env.example`
   Placeholder environment variables for booking email delivery.
 

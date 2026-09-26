@@ -72,6 +72,6 @@ export const contactDetails = {
   phone: "+447404805919",
   email: "info@stmmotors.com",
   whatsapp: "WhatsApp support available",
-  address: "123 Workshop Lane, Motor City, MC1 2AB",
+  address: "26 Melville Brodie Gardens, Kirkcaldy, KY1 2FN",
   openingHours: "Mon-Sat: 8am - 6pm",
 };

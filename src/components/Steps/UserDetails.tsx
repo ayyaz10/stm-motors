@@ -9,6 +9,7 @@ import {
   type BookingAvailabilityState,
 } from "../../lib/availability";
 import validatePostcode, { formatPostcode } from "../../utils/postcode";
+import { trackAnalyticsEvent, trackGoogleAdsConversion } from "../../lib/googleTracking";
 
 interface BookingUserDetails {
   fullName: string;
@@ -386,6 +387,8 @@ function UserDetails({
       });
 
       setCreatedBooking(booking);
+      trackAnalyticsEvent("booking_submitted", { source: "service" });
+      trackGoogleAdsConversion("booking");
       submissionIdempotencyKeyRef.current = null;
       submissionFingerprintRef.current = null;
       goToNextStep();

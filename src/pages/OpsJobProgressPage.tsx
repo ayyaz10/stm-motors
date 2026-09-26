@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Search,
   Table2,
+  Trash2,
   Wrench,
 } from "lucide-react";
 import {
@@ -18,6 +19,7 @@ import {
   type DerivedJobProgressStatus,
   type OpsJobProgressBoardItem,
 } from "../lib/jobWorkflow";
+import { unassignJob } from "../lib/jobs";
 import DashboardSelect from "../components/dashboard/DashboardSelect";
 
 interface OpsJobProgressPageProps {
@@ -218,12 +220,16 @@ function ActionButtons({
   onOpenJobOverview,
   onOpenChecklist,
   onOpenCheckIn,
+  onRemoveJob,
+  isRemoving = false,
   compact = false,
 }: {
   item: OpsJobProgressBoardItem;
   onOpenJobOverview?: OpsJobProgressPageProps["onOpenJobOverview"];
   onOpenChecklist?: OpsJobProgressPageProps["onOpenChecklist"];
   onOpenCheckIn?: OpsJobProgressPageProps["onOpenCheckIn"];
+  onRemoveJob?: (item: OpsJobProgressBoardItem) => void;
+  isRemoving?: boolean;
   compact?: boolean;
 }) {
   const className = compact
@@ -256,6 +262,21 @@ function ActionButtons({
         <ChevronRight className="h-4 w-4" />
         Check-In
       </button>
+      {onRemoveJob ? (
+        <button
+          type="button"
+          onClick={() => onRemoveJob(item)}
+          disabled={isRemoving}
+          className={`${className} border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60`}
+        >
+          {isRemoving ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+          ) : (
+            <Trash2 className="h-4 w-4" />
+          )}
+          {isRemoving ? "Removing..." : "Remove Job"}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -282,6 +303,7 @@ function OpsJobProgressPage({
   const [sortDirection, setSortDirection] = useState<SortDirection>(
     savedState.sortDirection,
   );
+  const [removingJobId, setRemovingJobId] = useState<string | null>(null);
 
   const loadJobs = async () => {
     try {
@@ -327,6 +349,29 @@ function OpsJobProgressPage({
     sortKey,
     sortDirection,
   ]);
+
+  const handleRemoveJob = async (item: OpsJobProgressBoardItem) => {
+    const confirmed = window.confirm(
+      `Permanently remove ${item.job.job_reference} and return booking ${item.booking.booking_number} to the unassigned pool?\n\nOnly use this for test or incorrectly created jobs. This cannot be undone.`,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setRemovingJobId(item.job.id);
+      setLoadError(null);
+      await unassignJob(item.job.id);
+      setJobs((current) =>
+        current.filter((currentItem) => currentItem.job.id !== item.job.id),
+      );
+    } catch (error) {
+      setLoadError(
+        error instanceof Error ? error.message : "Unable to remove the job.",
+      );
+    } finally {
+      setRemovingJobId(null);
+    }
+  };
 
   const mechanicOptions = useMemo(
     () =>
@@ -811,6 +856,14 @@ function OpsJobProgressPage({
                           onOpenJobOverview={onOpenJobOverview}
                           onOpenChecklist={onOpenChecklist}
                           onOpenCheckIn={onOpenCheckIn}
+                          onRemoveJob={
+                            !item.checkIn.isSubmitted &&
+                            item.checklistTotals.completed === 0 &&
+                            !["completed", "cancelled"].includes(item.job.status)
+                              ? handleRemoveJob
+                              : undefined
+                          }
+                          isRemoving={removingJobId === item.job.id}
                         />
                       </div>
                     </div>
@@ -929,6 +982,16 @@ function OpsJobProgressPage({
                               onOpenJobOverview={onOpenJobOverview}
                               onOpenChecklist={onOpenChecklist}
                               onOpenCheckIn={onOpenCheckIn}
+                              onRemoveJob={
+                                !item.checkIn.isSubmitted &&
+                                item.checklistTotals.completed === 0 &&
+                                !["completed", "cancelled"].includes(
+                                  item.job.status,
+                                )
+                                  ? handleRemoveJob
+                                  : undefined
+                              }
+                              isRemoving={removingJobId === item.job.id}
                               compact
                             />
                           </td>

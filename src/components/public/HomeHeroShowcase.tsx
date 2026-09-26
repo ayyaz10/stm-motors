@@ -20,9 +20,6 @@ function HomeHeroShowcase() {
       <div className="relative w-full px-6 lg:px-12">
         <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
           <div className="max-w-2xl">
-            <p className="mb-4 text-sm font-medium uppercase tracking-[0.24em] text-white/72">
-              Clear Car Care
-            </p>
             <h1 className="text-4xl font-bold leading-tight text-white lg:text-5xl xl:text-[3.7rem] xl:leading-[1.05]">
               Straightforward car care with a more polished booking experience
             </h1>

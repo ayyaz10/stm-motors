@@ -84,7 +84,7 @@ function TermsPage({
 
             <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/70 px-4 py-2 text-sm font-medium text-slate-600">
               <CalendarDays className="h-4 w-4 text-[#1c69d4]" />
-              Last updated 7 August 2026
+              Latest policy update 4 September 2026
             </div>
           </div>
         </div>
@@ -195,6 +195,7 @@ function TermsPage({
                           <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 lg:text-[15px]">
                             {page.summary}
                           </p>
+                          <p className="mt-2 text-xs font-medium text-slate-500">Updated {page.lastUpdated}</p>
                         </div>
                       </div>
 

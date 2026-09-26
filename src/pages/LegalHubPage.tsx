@@ -6,7 +6,7 @@ import {
 import { usePageMetadata } from "../lib/seo";
 import PublicLink from "../components/public/PublicLink";
 
-const lastUpdated = "7 August 2026";
+const lastUpdated = "4 September 2026";
 
 function LegalHubPage() {
   usePageMetadata({

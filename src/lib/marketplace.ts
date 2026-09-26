@@ -377,6 +377,64 @@ export async function fetchAdminMarketplaceListing(id: string) {
   ) as MarketplaceAdminVehicleListing;
 }
 
+export async function deleteMarketplaceListing(
+  listing: MarketplaceAdminVehicleListing,
+): Promise<void> {
+  if (listing.status !== "draft" && listing.status !== "archived") {
+    throw new Error(
+      "Archive this listing before permanently deleting it.",
+    );
+  }
+
+  const { data: enquiries, error: enquiryError } = await supabase
+    .from("marketplace_vehicle_enquiries")
+    .select("id")
+    .eq("vehicle_id", listing.id)
+    .limit(1);
+
+  if (enquiryError) {
+    throw new Error(
+      messageFromError(enquiryError, "Unable to check listing enquiries."),
+    );
+  }
+
+  if ((enquiries ?? []).length > 0) {
+    throw new Error(
+      "This listing has customer enquiries and must be retained as a business record. Keep it archived instead.",
+    );
+  }
+
+  const { error, count } = await supabase
+    .from("marketplace_vehicle_listings")
+    .delete({ count: "exact" })
+    .eq("id", listing.id)
+    .in("status", ["draft", "archived"]);
+
+  if (error) {
+    throw new Error(messageFromError(error, "Unable to delete the listing."));
+  }
+
+  if (!count) {
+    throw new Error(
+      "This listing could not be deleted. Refresh the page and confirm that it is still draft or archived.",
+    );
+  }
+
+  const storagePaths = listing.images.map((image) => image.storage_path);
+  if (storagePaths.length > 0) {
+    const { error: storageError } = await supabase.storage
+      .from(MARKETPLACE_LISTING_IMAGE_BUCKET)
+      .remove(storagePaths);
+
+    if (storageError) {
+      console.error(
+        "Listing deleted, but its stored images could not be cleaned up.",
+        storageError,
+      );
+    }
+  }
+}
+
 export async function saveMarketplaceListing(
   input: MarketplaceListingInput,
   userId: string,
@@ -536,4 +594,3 @@ export async function createSellerImageSignedUrl(path: string) {
   if (error) throw new Error(error.message);
   return data.signedUrl;
 }
-

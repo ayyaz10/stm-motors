@@ -3,19 +3,25 @@ import {
   ArrowRight,
   BriefcaseBusiness,
   Building2,
+  CalendarDays,
   Check,
+  ChevronDown,
   CircleCheckBig,
+  ClipboardList,
+  Headphones,
+  MapPin,
   Wrench,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import GoogleRecaptchaField from "../components/forms/GoogleRecaptchaField";
 import { mechanicServiceOptions as serviceOptions } from "../data/mechanicServiceOptions";
 import type {
   MechanicApplicationInput,
   MechanicApplicationRecord,
   MechanicApplicationType,
 } from "../lib/mechanicApplications";
-import { sendMechanicApplicationNotificationEmail } from "../lib/formSubmit";
 import { submitMechanicApplication } from "../lib/mechanicApplications";
+import { trackAnalyticsEvent, trackGoogleAdsConversion } from "../lib/googleTracking";
 import { usePageMetadata } from "../lib/seo";
 
 type ApplicationStep = 1 | 2 | 3;
@@ -76,25 +82,95 @@ const insuranceOptions = [
   { label: "No insurance currently", value: "no_current_insurance" },
 ];
 
-const applicationHighlights = [
+const mechanicBenefits = [
   {
-    title: "Manual approval",
-    description: "Every application is reviewed before login access is created.",
+    icon: MapPin,
+    title: "Local opportunities",
+    description:
+      "Take on suitable work matched to the services you offer and the area you cover.",
   },
   {
-    title: "Built for real work setups",
-    description: "Suitable for mobile, mixed, and garage-based mechanics.",
+    icon: CalendarDays,
+    title: "Flexible working",
+    description:
+      "Share your preferred working pattern, travel radius, and the jobs that fit your setup.",
   },
   {
-    title: "Clear 3-step form",
-    description: "A focused application that captures the detail we actually need.",
+    icon: ClipboardList,
+    title: "Clear job information",
+    description:
+      "Assigned jobs include the vehicle, service, location, and practical details you need.",
+  },
+  {
+    icon: Headphones,
+    title: "Team support",
+    description:
+      "STM Motors helps coordinate customer information and the operational side of each job.",
   },
 ];
 
-const reviewSteps = [
-  "You submit the application with your details and work setup.",
-  "STM Motors reviews experience, service fit, and coverage.",
-  "Approved mechanics receive their invite and can then use staff login.",
+const mechanicJourney = [
+  {
+    title: "Tell us about your work",
+    description:
+      "Share your experience, services, equipment, work setup, and usual coverage area.",
+  },
+  {
+    title: "Get matched to suitable jobs",
+    description:
+      "STM Motors uses your skills and location to coordinate relevant local opportunities.",
+  },
+  {
+    title: "Complete work with clear details",
+    description:
+      "Use the mechanic portal to view assigned jobs and follow the guided service workflow.",
+  },
+];
+
+const mechanicRequirements = [
+  "Relevant vehicle servicing or repair experience",
+  "Suitable tools and equipment for the work you offer",
+  "Appropriate insurance for the jobs you carry out",
+  "Reliable communication and professional customer care",
+];
+
+const mechanicFaqs = [
+  {
+    question: "Who can apply to work with STM Motors?",
+    answer:
+      "Mobile mechanics, garage-based mechanics, and businesses offering a mixture of workshop and mobile services can apply.",
+  },
+  {
+    question: "What type of work is available?",
+    answer:
+      "Opportunities can include routine servicing, brakes, diagnostics, batteries, filters, suspension, steering, heating, and air-conditioning work. Jobs are matched to the services you tell us you offer.",
+  },
+  {
+    question: "How are jobs matched to me?",
+    answer:
+      "Matching is based on your service area, work setup, skills, equipment, and the requirements of each customer booking. Job volume is not guaranteed and can vary by location and demand.",
+  },
+  {
+    question: "Do I need formal qualifications?",
+    answer:
+      "Tell us about any qualifications, certifications, or practical training you have. Experienced mechanics without formal qualifications can still share their details with us.",
+  },
+  {
+    question: "What insurance and equipment do I need?",
+    answer:
+      "Requirements depend on the work you carry out. You should have suitable tools and the appropriate insurance for any job you accept. The application lets you describe your current setup.",
+  },
+  {
+    question: "What happens after I send the form?",
+    answer:
+      "STM Motors will use the contact details you provide to discuss suitable mechanic opportunities and the practical next steps with you.",
+  },
+];
+
+const applicationNextSteps = [
+  "Keep an eye on the email address and phone number you provided.",
+  "We will discuss your services, coverage, and preferred working setup.",
+  "Any practical next steps will be shared with you directly.",
 ];
 
 const MECHANIC_APPLICATION_DRAFT_STORAGE_KEY =
@@ -507,7 +583,7 @@ function MechanicApplicationPage() {
   usePageMetadata({
     title: "Apply to Be a Mechanic | STM Motors",
     description:
-      "Apply to join STM Motors as a mechanic. Share your work setup, experience, and service coverage so the team can review your application.",
+      "Join the STM Motors mechanic network for suitable local vehicle service and repair opportunities across the UK.",
     pathname: "/mechanic/apply",
   });
 
@@ -523,6 +599,8 @@ function MechanicApplicationPage() {
   const [attemptedSteps, setAttemptedSteps] = useState<AttemptedSteps>({});
   const [interactedSteps, setInteractedSteps] = useState<InteractedSteps>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaResetCounter, setCaptchaResetCounter] = useState(0);
   const [hasQualifications, setHasQualifications] = useState<boolean | null>(
     savedDraft?.hasQualifications ?? null,
   );
@@ -536,6 +614,11 @@ function MechanicApplicationPage() {
   const [quietOpenStep, setQuietOpenStep] = useState<ApplicationStep | null>(
     null,
   );
+  const applicationIdRef = useRef<string | null>(null);
+  const recaptchaSiteKey =
+    typeof __STM_RECAPTCHA_SITE_KEY__ === "string"
+      ? __STM_RECAPTCHA_SITE_KEY__.trim()
+      : "";
 
   useEffect(() => {
     if (submittedApplication || typeof window === "undefined") {
@@ -822,26 +905,34 @@ function MechanicApplicationPage() {
       return;
     }
 
+    if (!recaptchaSiteKey) {
+      setSubmissionError(
+        "Spam protection is temporarily unavailable. Please try again later.",
+      );
+      return;
+    }
+
+    if (!captchaToken) {
+      setSubmissionError("Please confirm you are not a robot before applying.");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setSubmissionError(null);
-      const application = await submitMechanicApplication(formState);
-
-      try {
-        await sendMechanicApplicationNotificationEmail({
-          applicationId: application.id,
-          submittedAt: application.submittedAt,
-          formState,
-        });
-      } catch (notificationError) {
-        console.warn(
-          "Mechanic application saved, but the FormSubmit notification email failed.",
-          notificationError,
-        );
-      }
+      applicationIdRef.current ??= crypto.randomUUID();
+      const application = await submitMechanicApplication(
+        formState,
+        captchaToken,
+        applicationIdRef.current,
+      );
 
       setSubmittedApplication(application);
+      trackAnalyticsEvent("mechanic_application_submitted", { source: "service" });
+      trackGoogleAdsConversion("mechanic");
     } catch (error) {
+      setCaptchaToken("");
+      setCaptchaResetCounter((current) => current + 1);
       setSubmissionError(
         error instanceof Error
           ? error.message
@@ -866,15 +957,16 @@ function MechanicApplicationPage() {
               <div className="grid lg:grid-cols-[1.12fr_0.88fr]">
                 <div className="p-7 sm:p-8 lg:p-10">
                   <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#1c69d4]">
-                    Application received
+                    Details received
                   </span>
                   <h1 className="mt-6 max-w-3xl text-4xl font-bold tracking-tight text-slate-950 sm:text-5xl">
-                    Thanks, {submittedApplication.firstName}. Your application
-                    is now in review.
+                    Thanks, {submittedApplication.firstName}. We&apos;ve received
+                    your details.
                   </h1>
                   <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
-                    STM Motors will review your setup, coverage, and experience.
-                    If approved, we will send the next steps for mechanic access.
+                    STM Motors will contact you using the details provided to
+                    discuss suitable mechanic opportunities and practical next
+                    steps.
                   </p>
 
                   <div className="mt-8 grid gap-3 sm:grid-cols-2">
@@ -905,10 +997,10 @@ function MechanicApplicationPage() {
                     </div>
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
                       <span className="block text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                        Status
+                        Coverage postcode
                       </span>
-                      <span className="mt-1.5 block break-words text-[0.95rem] font-semibold capitalize text-slate-950">
-                        {submittedApplication.status.replaceAll("_", " ")}
+                      <span className="mt-1.5 block break-words text-[0.95rem] font-semibold uppercase text-slate-950">
+                        {submittedApplication.postcode}
                       </span>
                     </div>
                   </div>
@@ -924,7 +1016,7 @@ function MechanicApplicationPage() {
                         What happens next
                       </p>
                       <div className="mt-5 space-y-4">
-                        {reviewSteps.map((item, index) => (
+                        {applicationNextSteps.map((item, index) => (
                           <div key={item} className="flex items-start gap-4">
                             <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1c69d4] text-sm font-semibold text-white">
                               {index + 1}
@@ -947,63 +1039,113 @@ function MechanicApplicationPage() {
   }
 
   return (
-    <div className="bg-[radial-gradient(circle_at_top,#eef6ff_0%,#ffffff_56%,#f8fafc_100%)] pt-24 text-slate-900 sm:pt-28">
-      <section className="py-10 lg:py-14">
-        <div className="mx-auto max-w-6xl px-6 lg:px-12">
-          <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_30px_90px_-62px_rgba(15,23,42,0.22)]">
-            <div className="grid lg:grid-cols-[minmax(0,1.12fr)_340px]">
-              <div className="bg-[linear-gradient(135deg,#f8fbff_0%,#eef5ff_100%)] p-7 sm:p-8 lg:p-10">
-                <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-slate-950 sm:text-[3.15rem] sm:leading-[1.04]">
-                  Join STM Motors as an approved mechanic
-                </h1>
-                <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
-                  Share your working model, service coverage, and experience.
-                  Our team reviews every application before mechanic access is
-                  approved.
-                </p>
-
-                <div className="mt-8 grid gap-3 sm:grid-cols-3">
-                  {applicationHighlights.map((item) => (
-                    <article
-                      key={item.title}
-                      className="rounded-[1.35rem] border border-white/70 bg-white/80 px-4 py-4 shadow-[0_18px_45px_-36px_rgba(15,23,42,0.25)] backdrop-blur-[1px]"
-                    >
-                      <span className="inline-flex h-2.5 w-2.5 rounded-full bg-[#1c69d4]" />
-                      <p className="mt-3 text-sm font-semibold text-slate-950">
-                        {item.title}
-                      </p>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">
-                        {item.description}
-                      </p>
-                    </article>
-                  ))}
-                </div>
-              </div>
-
-              <div className="border-t border-slate-200 bg-slate-50 p-7 lg:border-l lg:border-t-0 lg:p-8">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#1c69d4]">
-                  Approval process
-                </p>
-                <div className="mt-5 space-y-4">
-                  {reviewSteps.map((item, index) => (
-                    <div
-                      key={item}
-                      className="flex items-start gap-4 rounded-[1.35rem] border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_45px_-38px_rgba(15,23,42,0.18)]"
-                    >
-                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1c69d4] text-sm font-semibold text-white">
-                        {index + 1}
+    <div className="bg-white pt-16 text-slate-900 lg:pt-20">
+      <section className="overflow-hidden bg-slate-950 text-white">
+        <div className="mx-auto grid max-w-7xl lg:min-h-[34rem] lg:grid-cols-2">
+          <div className="flex items-center px-6 py-14 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
+            <div className="max-w-xl">
+              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl sm:leading-[1.05] lg:text-[3.5rem]">
+                Join STM Motors for more local work and flexibility.
+              </h1>
+              <p className="mt-6 text-base leading-8 text-slate-300 sm:text-lg">
+                Join the STM Motors mechanic network and tell us what you do,
+                where you work, and which vehicle services suit your setup.
+              </p>
+              <div className="mt-7 grid gap-3 text-sm text-slate-200 sm:grid-cols-2">
+                {["Mobile and garage setups", "Jobs matched to your services", "Clear job information", "Operational team support"].map(
+                  (item) => (
+                    <div key={item} className="flex items-center gap-3">
+                      <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-blue-300">
+                        <Check className="h-3.5 w-3.5" strokeWidth={3} />
                       </span>
-                      <p className="pt-0.5 text-sm leading-7 text-slate-700">
-                        {item}
-                      </p>
+                      <span>{item}</span>
                     </div>
-                  ))}
-                </div>
+                  ),
+                )}
               </div>
+              <button
+                type="button"
+                onClick={() => scrollFormIntoView()}
+                className="mt-9 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#1c69d4] px-6 text-sm font-semibold text-white transition hover:bg-[#2878e5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+              >
+                Apply to join STM Motors
+                <ArrowRight className="h-4 w-4" />
+              </button>
             </div>
-          </section>
+          </div>
 
-          <div className="mt-7 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_350px]">
+          <div className="relative min-h-72 overflow-hidden sm:min-h-96 lg:min-h-full">
+            <img
+              src="/images/mechanic-recruitment.jpg"
+              alt="Mobile mechanic working beside a customer vehicle"
+              width="1200"
+              height="600"
+              className="absolute inset-0 h-full w-full object-cover object-center"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/35 via-transparent to-transparent lg:bg-gradient-to-r lg:from-slate-950/20 lg:to-transparent" />
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-100 bg-white py-14 sm:py-16">
+        <div className="mx-auto max-w-7xl px-6 lg:px-12">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+              A practical way to grow your workload
+            </h2>
+          </div>
+          <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {mechanicBenefits.map((benefit) => {
+              const Icon = benefit.icon;
+
+              return (
+                <article key={benefit.title} className="text-center">
+                  <span className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-[#1c69d4]">
+                    <Icon className="h-6 w-6" />
+                  </span>
+                  <h3 className="mt-5 text-lg font-bold text-slate-950">
+                    {benefit.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    {benefit.description}
+                  </p>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-slate-50 py-16 lg:py-20">
+        <div className="mx-auto max-w-6xl px-6 lg:px-12">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+              Straightforward from details to jobs
+            </h2>
+          </div>
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            {mechanicJourney.map((step, index) => (
+              <article
+                key={step.title}
+                className="rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_-50px_rgba(15,23,42,0.3)]"
+              >
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#1c69d4] text-sm font-bold text-white">
+                  {index + 1}
+                </span>
+                <h3 className="mt-5 text-xl font-bold text-slate-950">
+                  {step.title}
+                </h3>
+                <p className="mt-3 text-sm leading-7 text-slate-600">
+                  {step.description}
+                </p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="mechanic-application" className="scroll-mt-24 bg-white py-16 lg:py-20">
+        <div className="mx-auto max-w-4xl px-6 lg:px-12">
             <form
               ref={formCardRef}
               onSubmit={handleFormSubmit}
@@ -1020,7 +1162,8 @@ function MechanicApplicationPage() {
                       Mechanic application
                     </h2>
                     <p className="mt-2 text-sm leading-6 text-slate-600">
-                      Complete the form below and we will review your setup.
+                      Complete the form below to tell us about your experience,
+                      services, and working setup.
                     </p>
                   </div>
                   <span className="rounded-full bg-blue-50 px-4 py-2 text-sm font-semibold text-[#1c69d4]">
@@ -1462,9 +1605,15 @@ function MechanicApplicationPage() {
                         updateField("additionalNotes", event.target.value)
                       }
                       className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#1c69d4]"
-                      placeholder="Share specialist experience, preferred working pattern, or anything useful for review."
+                      placeholder="Share specialist experience, your preferred working pattern, or anything else that may help us match suitable work."
                     />
                   </label>
+
+                  <GoogleRecaptchaField
+                    siteKey={recaptchaSiteKey}
+                    onTokenChange={setCaptchaToken}
+                    resetSignal={captchaResetCounter}
+                  />
                 </div>
               ) : null}
 
@@ -1512,34 +1661,71 @@ function MechanicApplicationPage() {
                 )}
               </div>
             </form>
+          </div>
+      </section>
 
-            <div className="grid gap-6 lg:sticky lg:top-32 lg:self-start">
-              <article className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_28px_70px_-54px_rgba(15,23,42,0.2)]">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#1c69d4]">
-                  Review process
-                </p>
-                <p className="mt-3 text-sm leading-6 text-slate-600">
-                  The application is short, but our review is manual so we can
-                  match approved mechanics to the right STM Motors work.
-                </p>
-                <div className="mt-5 space-y-4">
-                  {reviewSteps.map((item, index) => (
-                    <div
-                      key={item}
-                      className="flex items-start gap-4 rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-4"
-                    >
-                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1c69d4] text-sm font-semibold text-white">
-                        {index + 1}
-                      </span>
-                      <p className="pt-0.5 text-sm leading-7 text-slate-700">
-                        {item}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </article>
+      <section className="bg-slate-50 py-16 lg:py-20">
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 lg:grid-cols-[0.75fr_1.25fr] lg:px-12">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight text-slate-950">
+              What you need before you apply
+            </h2>
+            <p className="mt-4 text-base leading-7 text-slate-600">
+              Tell us honestly about your current setup. The right requirements
+              can vary depending on the services and work types you offer.
+            </p>
+            <ul className="mt-7 space-y-4">
+              {mechanicRequirements.map((requirement) => (
+                <li key={requirement} className="flex items-start gap-3">
+                  <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[#1c69d4]">
+                    <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                  </span>
+                  <span className="text-sm leading-6 text-slate-700">
+                    {requirement}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight text-slate-950">
+              Frequently asked questions
+            </h2>
+            <div className="mt-7 divide-y divide-slate-200 rounded-[1.5rem] border border-slate-200 bg-white px-5 sm:px-6">
+              {mechanicFaqs.map((faq) => (
+                <details key={faq.question} className="group py-5">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left font-semibold text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1c69d4] focus-visible:ring-offset-4 [&::-webkit-details-marker]:hidden">
+                    <span>{faq.question}</span>
+                    <ChevronDown className="h-5 w-5 shrink-0 text-[#1c69d4] transition-transform group-open:rotate-180 motion-reduce:transition-none" />
+                  </summary>
+                  <p className="mt-3 pr-8 text-sm leading-7 text-slate-600">
+                    {faq.answer}
+                  </p>
+                </details>
+              ))}
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="bg-[#1c69d4] py-14 text-white">
+        <div className="mx-auto flex max-w-5xl flex-col items-center px-6 text-center lg:px-12">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            Ready to work with STM Motors?
+          </h2>
+          <p className="mt-4 max-w-2xl text-base leading-7 text-blue-100">
+            Share your experience, coverage, and services using our focused
+            three-step mechanic form.
+          </p>
+          <button
+            type="button"
+            onClick={() => scrollFormIntoView()}
+            className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-semibold text-[#1c69d4] transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#1c69d4]"
+          >
+            Start your application
+            <ArrowRight className="h-4 w-4" />
+          </button>
         </div>
       </section>
     </div>

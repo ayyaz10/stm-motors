@@ -6,6 +6,7 @@ import { contactDetails } from "../../data/siteContent";
 import { submitContactEnquiry } from "../../lib/contactEnquiries";
 import { usePageMetadata } from "../../lib/seo";
 import { MARKETPLACE_SITE_ORIGIN } from "../../lib/siteMode";
+import { trackAnalyticsEvent, trackGoogleAdsConversion } from "../../lib/googleTracking";
 
 function MarketplaceContactPage() {
   const [form, setForm] = useState({
@@ -50,6 +51,8 @@ function MarketplaceContactPage() {
       setForm({ name: "", email: "", phone: "", message: "", website: "" });
       setCaptchaToken("");
       setCaptchaReset((value) => value + 1);
+      trackAnalyticsEvent("contact_submitted", { source: "marketplace" });
+      trackGoogleAdsConversion("contact");
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -64,12 +67,9 @@ function MarketplaceContactPage() {
   return (
     <div className="bg-slate-50">
       <section className="bg-slate-950 py-16 text-white">
-        <div className="mx-auto max-w-7xl px-6 lg:px-12">
-          <p className="text-sm font-semibold uppercase tracking-[.2em] text-blue-300">
-            Vehicle sales
-          </p>
-          <h1 className="mt-4 text-4xl font-bold sm:text-5xl">
-            Talk to STM Motors
+        <div className="mx-auto max-w-[90rem] px-5 lg:px-8">
+          <h1 className="text-4xl font-bold sm:text-5xl">
+            Contact STM Motors vehicle sales
           </h1>
           <p className="mt-5 max-w-2xl text-lg text-slate-300">
             Ask about current stock, a particular vehicle or the car you would
@@ -77,7 +77,7 @@ function MarketplaceContactPage() {
           </p>
         </div>
       </section>
-      <section className="mx-auto grid max-w-6xl gap-8 px-6 py-14 lg:grid-cols-[.7fr_1.3fr] lg:px-12">
+      <section className="mx-auto grid max-w-[90rem] gap-8 px-5 py-14 lg:grid-cols-[.7fr_1.3fr] lg:px-8">
         <aside className="h-fit rounded-3xl bg-blue-50 p-7">
           <h2 className="text-2xl font-bold">Contact sales</h2>
           <a

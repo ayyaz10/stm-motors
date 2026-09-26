@@ -18,6 +18,7 @@ Apply the marketplace migration and deploy the public submission functions:
 npx supabase db push --linked
 npx supabase functions deploy submit-marketplace-enquiry
 npx supabase functions deploy submit-sell-vehicle
+npx supabase functions deploy submit-mechanic-application
 ```
 
 Configure these Edge Function secrets (existing Resend and reCAPTCHA secrets
@@ -26,6 +27,8 @@ are reused):
 ```bash
 npx supabase secrets set MARKETPLACE_TO_EMAIL=info@stmmotors.com
 npx supabase secrets set "MARKETPLACE_FROM_EMAIL=STM Motors Sales <info@stmmotors.com>"
+npx supabase secrets set MECHANIC_APPLICATION_TO_EMAIL=info@stmmotors.com
+npx supabase secrets set "MECHANIC_APPLICATION_FROM_EMAIL=STM Motors <info@stmmotors.com>"
 ```
 
 Also retain `RESEND_API_KEY`, `CONTACT_RECAPTCHA_SECRET`, `SUPABASE_URL` and

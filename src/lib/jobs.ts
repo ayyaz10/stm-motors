@@ -268,6 +268,22 @@ export async function completeAssignedJob(jobId: string): Promise<void> {
 }
 
 export async function unassignJob(jobId: string): Promise<void> {
+  const { data: jobData, error: jobError } = await supabase
+    .from("jobs")
+    .select("status")
+    .eq("id", jobId)
+    .single<{ status: JobStatus }>();
+
+  if (jobError) {
+    throw new Error(jobError.message || "Failed to inspect the job status.");
+  }
+
+  if (jobData.status === "completed" || jobData.status === "cancelled") {
+    throw new Error(
+      "Completed or cancelled jobs are retained as business records and cannot be removed.",
+    );
+  }
+
   const { data: checkInData, error: checkInError } = await supabase
     .from("vehicle_check_ins")
     .select("id")

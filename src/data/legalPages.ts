@@ -21,6 +21,7 @@ export interface LegalPageDefinition {
 }
 
 const lastUpdated = "7 August 2026";
+const cookiePolicyLastUpdated = "4 September 2026";
 const websiteUrl = "https://stmmotors.com";
 const bookingEmail = contactDetails.email;
 const phoneNumber = contactDetails.phone;
@@ -187,8 +188,8 @@ export const legalPages: LegalPageDefinition[] = [
     description:
       "Understand the cookies and similar technologies used by STM Motors, including security tools like reCAPTCHA.",
     metaDescription:
-      "STM Motors cookie policy covering essential cookies, security tools, reCAPTCHA, and browser controls.",
-    lastUpdated,
+      "STM Motors cookie policy covering necessary storage, optional consent choices, Google Maps, reCAPTCHA, analytics, and advertising controls.",
+    lastUpdated: cookiePolicyLastUpdated,
     sections: [
       {
         title: "What cookies are",
@@ -197,32 +198,51 @@ export const legalPages: LegalPageDefinition[] = [
         ],
       },
       {
-        title: "How STM Motors uses them",
+        title: "Where this policy applies",
+        paragraphs: [
+          "This policy covers the public STM Motors service website at stmmotors.com and the vehicle marketplace at stmmotors.co.uk. Each domain stores its own consent choice because browser security prevents either site from reading the other domain's local storage.",
+          "The internal staff portal does not show the public cookie banner and does not enable public analytics or advertising by default. Necessary authentication and security storage may still be used there.",
+        ],
+      },
+      {
+        title: "Necessary technologies",
         bullets: [
-          "To keep essential parts of the website working correctly.",
-          "To support staff login, secure sessions, and operational access where relevant.",
-          "To reduce spam, abuse, or automated misuse through tools such as Google reCAPTCHA.",
-          "To remember limited functional preferences where this is necessary for the user journey.",
+          "The stm_cookie_consent_v1 local-storage record saves your choices, policy version, decision date, and six-month expiry.",
+          "Booking and mechanic application draft storage keeps information available in that browser while you complete a form. Booking data is cleared after the booking journey; an application draft is cleared after successful submission. You can also remove either through browser storage controls.",
+          "The mechanic recruitment message uses session storage to show at most once per session and local storage to remember a dismissal for seven days.",
+          "Supabase may use browser storage for secure staff authentication sessions and operational access.",
+          "Security and form-protection technologies are used where reasonably necessary to prevent spam and abuse.",
         ],
       },
       {
         title: "Security and anti-spam tools",
         paragraphs: [
-          "When Google reCAPTCHA is enabled on forms, Google may set cookies or process browser data to assess whether a submission appears genuine. This helps protect the contact and booking journeys from abuse.",
+          "Google reCAPTCHA is loaded only on forms where it is configured and used to distinguish genuine submissions from automated abuse. Google may set cookies or process browser, device, and interaction data for this security purpose. It is not enabled as a general analytics or advertising tool by STM Motors.",
         ],
       },
       {
-        title: "Non-essential cookies",
-        paragraphs: [
-          "STM Motors does not intend this page to claim the use of broad advertising or behavioural tracking cookies unless those are actually introduced. If non-essential analytics, advertising, or personalisation tools are added later, this policy and any related consent mechanism should be updated before relying on them.",
-        ],
-      },
-      {
-        title: "Managing cookies",
+        title: "Optional categories",
         bullets: [
-          "You can change or delete cookies through your browser settings.",
+          "Functional: allows optional features such as the embedded Google map. The map does not contact Google until functional consent is granted or you choose Load map.",
+          "Analytics: may load Google Analytics 4 only when a measurement ID is configured and analytics consent is granted. It is intended to measure page views and selected non-personal form-completion events.",
+          "Marketing: may load Google Ads measurement only when it is configured and marketing consent is granted. STM Motors does not send names, email addresses, phone numbers, postcodes, registration numbers, message contents, or uploaded files in tracking events.",
+          "All optional categories are off by default. Rejecting them does not prevent you from booking, enquiring, or browsing vehicles.",
+          "Google controls the detailed lifetime of any Google cookies set after consent. Before production analytics or advertising IDs are enabled, STM Motors will confirm those identifiers and retention periods here and update the policy version where required.",
+        ],
+      },
+      {
+        title: "Google consent controls",
+        paragraphs: [
+          "Where Google Analytics or Google Ads identifiers are configured, STM Motors uses a basic consent approach: the relevant Google tag is not requested before the matching optional consent is granted. Consent signals for analytics and advertising storage, advertising user data, and advertising personalisation remain denied unless you opt in.",
+        ],
+      },
+      {
+        title: "Managing and withdrawing consent",
+        bullets: [
+          "Use the Cookie settings link in the public website footer to review, accept, reject, or change optional categories at any time.",
+          "Your saved choice expires after six months, or earlier if a material policy-version change requires the website to ask again.",
+          "Withdrawing consent stops future optional tag use and the site attempts to remove first-party Google measurement cookies it can access. You may also delete stored website data through your browser settings.",
           "Blocking essential cookies may affect booking, login, or security-related parts of the website.",
-          "Where consent is required for future non-essential tools, STM Motors should offer that choice separately from essential website functions.",
         ],
         note: `Questions about cookies or website privacy can be sent to ${bookingEmail}.`,
       },

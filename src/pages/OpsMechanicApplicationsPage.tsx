@@ -9,12 +9,14 @@ import {
   Phone,
   RefreshCw,
   ShieldCheck,
+  Trash2,
   Wrench,
   XCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   approveMechanicApplication,
+  deleteMechanicApplication,
   fetchMechanicApplications,
   type MechanicApplicationRecord,
   type MechanicApplicationStatus,
@@ -204,6 +206,38 @@ function OpsMechanicApplicationsPage({
         error instanceof Error
           ? error.message
           : "Unable to approve the application.",
+      );
+    } finally {
+      setBusyApplicationId(null);
+      setBusyAction(null);
+    }
+  };
+
+  const handleDelete = async (application: MechanicApplicationRecord) => {
+    const confirmed = window.confirm(
+      `Permanently delete the application from ${application.firstName} ${application.lastName} (${application.email})?\n\nOnly use this for test, spam or duplicate applications. This cannot be undone.`,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setBusyApplicationId(application.id);
+      setBusyAction("delete");
+      await deleteMechanicApplication(application.id);
+      setApplications((current) =>
+        current.filter((item) => item.id !== application.id),
+      );
+      setDraftNotes((current) => {
+        const next = { ...current };
+        delete next[application.id];
+        return next;
+      });
+      setLoadError(null);
+    } catch (error) {
+      setLoadError(
+        error instanceof Error
+          ? error.message
+          : "Unable to delete the application.",
       );
     } finally {
       setBusyApplicationId(null);
@@ -621,6 +655,24 @@ function OpsMechanicApplicationsPage({
                               ? "Saving..."
                               : "Reject application"}
                           </button>
+                          {application.status !== "approved" &&
+                          !application.authUserId ? (
+                            <button
+                              type="button"
+                              onClick={() => void handleDelete(application)}
+                              disabled={isBusy}
+                              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-rose-300 bg-rose-50 px-4 text-sm font-semibold text-rose-800 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {isBusy && busyAction === "delete" ? (
+                                <LoaderCircle className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                              {isBusy && busyAction === "delete"
+                                ? "Deleting..."
+                                : "Delete test or duplicate application"}
+                            </button>
+                          ) : null}
                         </div>
                       </div>
                     </div>

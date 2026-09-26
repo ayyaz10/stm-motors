@@ -3,10 +3,10 @@ import {
   CarFront,
   CheckCircle2,
   LoaderCircle,
-  ShieldCheck,
 } from "lucide-react";
 import { useState } from "react";
 import GoogleRecaptchaField from "../../components/forms/GoogleRecaptchaField";
+import MarketplaceFaqSection from "../../components/marketplace/MarketplaceFaqSection";
 import {
   MAX_SELLER_IMAGES,
   MAX_SELLER_IMAGE_BYTES,
@@ -15,6 +15,7 @@ import {
 } from "../../lib/marketplace";
 import { usePageMetadata } from "../../lib/seo";
 import { MARKETPLACE_SITE_ORIGIN } from "../../lib/siteMode";
+import { trackAnalyticsEvent, trackGoogleAdsConversion } from "../../lib/googleTracking";
 
 const initialForm = {
   name: "",
@@ -113,6 +114,8 @@ function SellYourCarPage() {
       setIdempotencyKey(crypto.randomUUID());
       setCaptchaToken("");
       setCaptchaReset((value) => value + 1);
+      trackAnalyticsEvent("vehicle_sale_request_submitted", { source: "marketplace" });
+      trackGoogleAdsConversion("vehicle_sale");
     } catch (error) {
       setSubmitError(
         error instanceof Error
@@ -130,33 +133,19 @@ function SellYourCarPage() {
   return (
     <div className="bg-slate-50">
       <section className="bg-slate-950 text-white">
-        <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 lg:grid-cols-[1fr_.75fr] lg:items-center lg:px-12 lg:py-20">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[.2em] text-blue-300">
-              Sell your car
-            </p>
-            <h1 className="mt-4 text-4xl font-bold sm:text-5xl">
-              Tell us about your vehicle.
+        <div className="mx-auto max-w-[90rem] px-5 py-16 lg:px-8 lg:py-20">
+          <div className="max-w-3xl">
+            <h1 className="text-4xl font-bold sm:text-5xl">
+              Sell your car to STM Motors.
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-300">
               Send the key details and a few optional photos. STM Motors will
               review everything and contact you about a sensible next step.
             </p>
           </div>
-          <div className="rounded-2xl border border-white/15 bg-white/10 p-6">
-            <ShieldCheck className="h-8 w-8 text-blue-300" />
-            <p className="mt-4 font-semibold">
-              A submission is not a guaranteed valuation, purchase offer or
-              agreement.
-            </p>
-            <p className="mt-2 text-sm leading-6 text-slate-300">
-              Nothing is published automatically. Your details and photos stay
-              private to authorised STM Motors staff.
-            </p>
-          </div>
         </div>
       </section>
-      <section className="mx-auto max-w-5xl px-6 py-12 lg:px-12 lg:py-16">
+      <section className="mx-auto max-w-[90rem] px-5 py-12 lg:px-8 lg:py-16">
         {reference ? (
           <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-8 text-center">
             <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" />
@@ -530,6 +519,7 @@ function SellYourCarPage() {
           </form>
         )}
       </section>
+      <MarketplaceFaqSection />
     </div>
   );
 }

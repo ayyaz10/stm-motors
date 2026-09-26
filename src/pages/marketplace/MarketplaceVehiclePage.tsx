@@ -23,6 +23,7 @@ import {
 } from "../../lib/marketplace";
 import { usePageMetadata } from "../../lib/seo";
 import { MARKETPLACE_SITE_ORIGIN } from "../../lib/siteMode";
+import { trackAnalyticsEvent, trackGoogleAdsConversion } from "../../lib/googleTracking";
 
 function MarketplaceVehiclePage({ slug }: { slug: string }) {
   const [vehicle, setVehicle] = useState<MarketplaceVehicleListing | null>(
@@ -162,6 +163,8 @@ function MarketplaceVehiclePage({ slug }: { slug: string }) {
       setIdempotencyKey(crypto.randomUUID());
       setCaptchaToken("");
       setCaptchaReset((value) => value + 1);
+      trackAnalyticsEvent("marketplace_enquiry_submitted", { source: "marketplace" });
+      trackGoogleAdsConversion("marketplace_enquiry");
     } catch (error) {
       setSubmitError(
         error instanceof Error ? error.message : "Unable to send your enquiry.",
@@ -218,7 +221,7 @@ function MarketplaceVehiclePage({ slug }: { slug: string }) {
 
   return (
     <div className="bg-slate-50">
-      <section className="mx-auto max-w-7xl px-6 py-8 lg:px-12 lg:py-12">
+      <section className="mx-auto max-w-[90rem] px-5 py-8 lg:px-8 lg:py-12">
         <PublicLink
           href="/cars"
           className="inline-flex items-center gap-2 text-sm font-semibold text-[#1c69d4]"
@@ -295,7 +298,7 @@ function MarketplaceVehiclePage({ slug }: { slug: string }) {
       </section>
 
       <section className="border-y border-slate-200 bg-white">
-        <div className="mx-auto grid max-w-7xl gap-10 px-6 py-14 lg:grid-cols-[1fr_.8fr] lg:px-12">
+        <div className="mx-auto grid max-w-[90rem] gap-10 px-5 py-14 lg:grid-cols-[1fr_.8fr] lg:px-8">
           <div>
             <h2 className="text-3xl font-bold">About this vehicle</h2>
             <p className="mt-5 whitespace-pre-line leading-8 text-slate-600">

@@ -121,6 +121,7 @@ Core modules:
 
 - `src/lib/auth.ts`: staff sign in/out, session loading, profile loading, and auth state subscriptions
 - `src/lib/navigation.ts`: lightweight browser navigation helper shared across the route-switch app
+  - internal page-to-page navigation resets the document to the top on both public sites and the staff app, while hash links retain section scrolling
 - `src/lib/seo.ts`: client-side metadata and structured-data updates for public SEO pages
 - `src/lib/mechanics.ts`: mechanic dropdown data for ops assignment
 - `src/lib/mechanicJobs.ts`: mechanic dashboard job loading and progress summaries
@@ -319,6 +320,13 @@ Public website:
 - public pages use a separate premium light-theme design system from staff dashboards
 - booking flow can now be prefilled from the homepage hero form using URL query params
 - public metadata and social tags are updated client-side through `src/lib/seo.ts`
+- both public site footers credit and link to STM Consulting Group
+- marketplace public pages share the same 90rem content width and horizontal gutters as the marketplace header
+- marketplace home, inventory, and sell-your-car pages end with the reusable FAQ in `src/components/marketplace/MarketplaceFaqSection.tsx`; the FAQ makes clear that a seller submission is not a guaranteed valuation, offer, or agreement
+- mechanic application notifications are sent server-side by `submit-mechanic-application` through the existing Resend configuration; the browser no longer calls FormSubmit
+- ops/admin can permanently delete test, spam, or duplicate mechanic applications only while they remain unapproved and are not linked to a staff account
+- ops can remove test or incorrectly created jobs from Job Progress only before check-in or checklist work starts; completed and cancelled jobs are retained
+- marketplace staff can permanently delete draft or archived test/duplicate listings with confirmation, while listings with customer enquiries are retained
 
 ## Notes For Future Work
 

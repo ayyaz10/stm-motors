@@ -15,6 +15,13 @@ export default defineConfig(({ mode }) => {
       __STM_RECAPTCHA_SITE_KEY__: JSON.stringify(
         env.VITE_RECAPTCHA_SITE_KEY ?? "",
       ),
+      __STM_GA4_MEASUREMENT_ID__: JSON.stringify(env.VITE_GA4_MEASUREMENT_ID ?? ""),
+      __STM_GOOGLE_ADS_ID__: JSON.stringify(env.VITE_GOOGLE_ADS_ID ?? ""),
+      __STM_GOOGLE_ADS_BOOKING_LABEL__: JSON.stringify(env.VITE_GOOGLE_ADS_BOOKING_LABEL ?? ""),
+      __STM_GOOGLE_ADS_CONTACT_LABEL__: JSON.stringify(env.VITE_GOOGLE_ADS_CONTACT_LABEL ?? ""),
+      __STM_GOOGLE_ADS_MECHANIC_LABEL__: JSON.stringify(env.VITE_GOOGLE_ADS_MECHANIC_LABEL ?? ""),
+      __STM_GOOGLE_ADS_MARKETPLACE_ENQUIRY_LABEL__: JSON.stringify(env.VITE_GOOGLE_ADS_MARKETPLACE_ENQUIRY_LABEL ?? ""),
+      __STM_GOOGLE_ADS_VEHICLE_SALE_LABEL__: JSON.stringify(env.VITE_GOOGLE_ADS_VEHICLE_SALE_LABEL ?? ""),
       __STM_SITE_MODE__: JSON.stringify(
         env.VITE_SITE_MODE ??
           (mode === "marketplace" || mode === "staff" ? mode : "auto"),

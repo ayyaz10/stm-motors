@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { buildLegalTermsHref } from "../../data/legalPages";
 import { contactDetails } from "../../data/siteContent";
 import { STAFF_SITE_ORIGIN } from "../../lib/siteMode";
+import { useCookieConsent } from "../privacy/CookieConsentContext";
 import PublicLink from "./PublicLink";
 import PublicLogo from "./PublicLogo";
 
@@ -14,6 +15,7 @@ interface PublicLayoutProps {
 
 function PublicLayout({ children, currentPath }: PublicLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { openPreferences } = useCookieConsent();
 
   const normalizedPath = useMemo(() => {
     if (currentPath === "/carselection") {
@@ -115,19 +117,19 @@ function PublicLayout({ children, currentPath }: PublicLayoutProps) {
       </a>
 
       <nav className="fixed inset-x-0 top-0 z-50 border-b border-slate-200/90 bg-white/95 backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-6 lg:px-12">
+        <div className="mx-auto max-w-[90rem] px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between lg:h-20">
-            <PublicLink href="/" className="flex items-center">
+            <PublicLink href="/" className="flex shrink-0 items-center">
               <PublicLogo />
             </PublicLink>
 
-            <div className="hidden items-center gap-1 lg:flex">
+            <div className="hidden items-center gap-1 xl:flex">
               {navItems.map((link) =>
                 link.isAnchor ? (
                   <a
                     key={link.href}
                     href={link.href}
-                    className="rounded-xl px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:text-[#1c69d4]"
+                    className="whitespace-nowrap rounded-xl px-3 py-2 text-[0.9375rem] font-semibold text-slate-600 transition-colors hover:text-[#1c69d4]"
                   >
                     {link.label}
                   </a>
@@ -135,7 +137,7 @@ function PublicLayout({ children, currentPath }: PublicLayoutProps) {
                   <PublicLink
                     key={link.href}
                     href={link.href}
-                    className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+                    className={`whitespace-nowrap rounded-xl px-3 py-2 text-[0.9375rem] font-semibold transition-colors ${
                       normalizedPath === link.href
                         ? "text-[#1c69d4]"
                         : "text-slate-600 hover:text-[#1c69d4]"
@@ -147,18 +149,18 @@ function PublicLayout({ children, currentPath }: PublicLayoutProps) {
               )}
             </div>
 
-            <div className="hidden items-center gap-3 lg:flex">
+            <div className="hidden shrink-0 items-center gap-3 xl:flex">
               {isHomepage ? (
                 <PublicLink
                   href="/book"
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1c69d4] px-5 text-sm font-semibold text-white hover:bg-[#1557b3]"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1c69d4] px-5 text-[0.9375rem] font-semibold text-white hover:bg-[#1557b3]"
                 >
                   Get Quote
                 </PublicLink>
               ) : (
                 <PublicLink
                   href="/book"
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1c69d4] px-5 text-sm font-semibold text-white hover:bg-[#1557b3]"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1c69d4] px-5 text-[0.9375rem] font-semibold text-white hover:bg-[#1557b3]"
                 >
                   Book Service
                 </PublicLink>
@@ -167,7 +169,7 @@ function PublicLayout({ children, currentPath }: PublicLayoutProps) {
 
             <button
               type="button"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 lg:hidden"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 xl:hidden"
               onClick={() => setIsMobileMenuOpen((current) => !current)}
               aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
               aria-expanded={isMobileMenuOpen}
@@ -184,7 +186,7 @@ function PublicLayout({ children, currentPath }: PublicLayoutProps) {
 
         <div
           id="mobile-site-menu"
-          className={`fixed inset-0 z-[70] transition-opacity duration-300 lg:hidden ${
+          className={`fixed inset-0 z-[70] transition-opacity duration-300 xl:hidden ${
             isMobileMenuOpen
               ? "pointer-events-auto opacity-100"
               : "pointer-events-none opacity-0"
@@ -204,7 +206,7 @@ function PublicLayout({ children, currentPath }: PublicLayoutProps) {
             }`}
           >
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-              <PublicLink href="/" className="flex items-center" onClick={closeMobileMenu}>
+              <PublicLink href="/" className="flex shrink-0 items-center" onClick={closeMobileMenu}>
                 <PublicLogo />
               </PublicLink>
 
@@ -226,7 +228,7 @@ function PublicLayout({ children, currentPath }: PublicLayoutProps) {
                       key={link.href}
                       href={link.href}
                       onClick={closeMobileMenu}
-                      className="rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-blue-50 hover:text-[#1c69d4]"
+                      className="rounded-xl px-4 py-3 text-left text-[0.9375rem] font-semibold text-slate-700 hover:bg-blue-50 hover:text-[#1c69d4]"
                     >
                       {link.label}
                     </a>
@@ -235,7 +237,7 @@ function PublicLayout({ children, currentPath }: PublicLayoutProps) {
                       key={link.href}
                       href={link.href}
                       onClick={closeMobileMenu}
-                      className="rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-blue-50 hover:text-[#1c69d4]"
+                      className="rounded-xl px-4 py-3 text-left text-[0.9375rem] font-semibold text-slate-700 hover:bg-blue-50 hover:text-[#1c69d4]"
                     >
                       {link.label}
                     </PublicLink>
@@ -248,7 +250,7 @@ function PublicLayout({ children, currentPath }: PublicLayoutProps) {
                   <PublicLink
                     href="/book"
                     onClick={closeMobileMenu}
-                    className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#1c69d4] px-5 text-sm font-semibold text-white hover:bg-[#1557b3]"
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#1c69d4] px-5 text-[0.9375rem] font-semibold text-white hover:bg-[#1557b3]"
                   >
                     Get Quote
                   </PublicLink>
@@ -256,7 +258,7 @@ function PublicLayout({ children, currentPath }: PublicLayoutProps) {
                   <PublicLink
                     href="/book"
                     onClick={closeMobileMenu}
-                    className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#1c69d4] px-5 text-sm font-semibold text-white hover:bg-[#1557b3]"
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#1c69d4] px-5 text-[0.9375rem] font-semibold text-white hover:bg-[#1557b3]"
                   >
                     Book Service
                   </PublicLink>
@@ -366,9 +368,24 @@ function PublicLayout({ children, currentPath }: PublicLayoutProps) {
           </div>
 
           <div className="mt-10 border-t border-white/10 pt-6 text-left">
-            <p className="text-xs text-slate-400">
-              &copy; 2026 STM Motors. All rights reserved.
-            </p>
+            <div className="flex flex-col gap-3 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-2">
+                <p>&copy; 2026 STM Motors. All rights reserved.</p>
+                <p>
+                  Powered by{" "}
+                  <a
+                    href="https://stmconsultinggorup.com"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline decoration-slate-600 underline-offset-4 transition hover:text-white"
+                  >
+                    STM Consulting Group, an IT consulting company
+                  </a>
+                  .
+                </p>
+              </div>
+              <button type="button" onClick={openPreferences} className="w-fit underline decoration-slate-600 underline-offset-4 transition hover:text-white">Cookie settings</button>
+            </div>
           </div>
         </div>
       </footer>

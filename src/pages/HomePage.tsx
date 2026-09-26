@@ -9,6 +9,7 @@ import {
 import type { FormEvent } from "react";
 import { useId, useState } from "react";
 import HomeFaqSection from "../components/public/HomeFaqSection";
+import MechanicRecruitmentModal from "../components/public/MechanicRecruitmentModal";
 import HeroBookingForm from "../components/public/HeroBookingForm";
 import HeroQuickStartForm from "../components/public/HeroQuickStartForm";
 import PublicLink from "../components/public/PublicLink";
@@ -108,7 +109,7 @@ const serviceCards = serviceCategorySections.map((category) => ({
 const vehicleMakes = [
   ["Ford", "Vauxhall", "Volkswagen", "Toyota", "Honda"],
   ["Nissan", "BMW", "Mercedes-Benz", "Audi", "Skoda"],
-  ["Hyundai", "Kia", "Peugeot", "Renault", "Volvo"],
+  ["Hyundai", "Kia", "Peugeot", "Renault", "Volvo", "And many more..."],
 ];
 
 const teamCommitments = [
@@ -656,8 +657,7 @@ function HomePage() {
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
               If you have relevant experience and want to take on local mobile
-              bookings, apply to join STM Motors and our team will review your
-              application before approval.
+              bookings, apply to join the STM Motors mechanic network.
             </p>
 
             <div className="mt-7 flex flex-wrap justify-center gap-3">
@@ -708,6 +708,7 @@ function HomePage() {
       </section>
 
       <HomeFaqSection />
+      <MechanicRecruitmentModal />
     </div>
   );
 }

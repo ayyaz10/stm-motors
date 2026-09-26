@@ -1,5 +1,6 @@
 import { Filter, LoaderCircle, Search, SlidersHorizontal } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import MarketplaceFaqSection from "../../components/marketplace/MarketplaceFaqSection";
 import MarketplaceVehicleCard from "../../components/marketplace/MarketplaceVehicleCard";
 import {
   fetchMarketplaceFilterOptions,
@@ -137,18 +138,15 @@ function MarketplaceInventoryPage() {
   return (
     <div className="bg-slate-50">
       <section className="bg-slate-950 py-14 text-white lg:py-20">
-        <div className="mx-auto max-w-7xl px-6 lg:px-12">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-300">
-            Vehicle inventory
-          </p>
-          <h1 className="mt-4 text-4xl font-bold sm:text-5xl">Cars for sale</h1>
+        <div className="mx-auto max-w-[90rem] px-5 lg:px-8">
+          <h1 className="text-4xl font-bold sm:text-5xl">Used cars for sale</h1>
           <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-300">
             Search current STM Motors stock, compare the important details and
             enquire directly.
           </p>
         </div>
       </section>
-      <div className="mx-auto grid max-w-7xl gap-8 px-6 py-10 lg:grid-cols-[18rem_1fr] lg:px-12 lg:py-14">
+      <div className="mx-auto grid max-w-[90rem] gap-8 px-5 py-10 lg:grid-cols-[18rem_1fr] lg:px-8 lg:py-14">
         <form
           onSubmit={applyFilters}
           className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-28"
@@ -348,6 +346,7 @@ function MarketplaceInventoryPage() {
           ) : null}
         </section>
       </div>
+      <MarketplaceFaqSection />
     </div>
   );
 }

@@ -61,4 +61,15 @@ describe("dealership customer flows", () => {
       (screen.getByLabelText("Message *") as HTMLTextAreaElement).value,
     ).toContain("Preferred make and model");
   });
+
+  test("shows the STM Motors address without loading Google Maps before consent", () => {
+    window.history.replaceState(null, "", "/contact");
+
+    render(<ContactPage />);
+
+    expect(screen.getByText("26 Melville Brodie Gardens")).toBeInTheDocument();
+    expect(screen.getByText("Kirkcaldy, KY1 2FN")).toBeInTheDocument();
+    expect(screen.getByText("Google map is turned off")).toBeInTheDocument();
+    expect(screen.queryByTitle("Map showing STM Motors at 26 Melville Brodie Gardens, Kirkcaldy, KY1 2FN")).not.toBeInTheDocument();
+  });
 });
