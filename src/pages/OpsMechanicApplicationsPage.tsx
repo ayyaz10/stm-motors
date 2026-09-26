@@ -18,6 +18,7 @@ import {
   approveMechanicApplication,
   deleteMechanicApplication,
   fetchMechanicApplications,
+  formatMechanicReferralSource,
   type MechanicApplicationRecord,
   type MechanicApplicationStatus,
   updateMechanicApplicationReview,
@@ -544,6 +545,21 @@ function OpsMechanicApplicationsPage({
                             <p className="mt-3 text-sm leading-7 text-slate-600">
                               {application.additionalNotes || "No extra notes."}
                             </p>
+                            <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+                              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#1c69d4]">
+                                Marketing source
+                              </p>
+                              <p className="mt-2 text-sm font-semibold text-slate-900">
+                                {formatMechanicReferralSource(
+                                  application.referralSource,
+                                )}
+                              </p>
+                              {application.referralDetails ? (
+                                <p className="mt-1 text-sm text-slate-600">
+                                  {application.referralDetails}
+                                </p>
+                              ) : null}
+                            </div>
                           </div>
                         </div>
                       </div>

@@ -27,6 +27,14 @@ create table if not exists public.mechanic_applications (
   has_diagnostic_tools boolean,
   has_service_van boolean,
   additional_notes text,
+  referral_source text check (
+    referral_source is null or referral_source in (
+      'google_search', 'facebook', 'instagram', 'tiktok', 'linkedin',
+      'indeed_or_job_board', 'friend_or_colleague',
+      'existing_customer_or_partner', 'leaflet_or_local_ad', 'other'
+    )
+  ),
+  referral_details text,
   review_note text,
   reviewed_at timestamptz,
   approved_at timestamptz,

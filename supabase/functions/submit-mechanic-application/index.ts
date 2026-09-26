@@ -24,13 +24,38 @@ const admin = createClient(supabaseUrl, serviceRoleKey, {
 });
 
 const mechanicTypes = new Set(["mobile_mechanic", "garage_and_mobile", "garage_based"]);
+const referralSources = new Set([
+  "google_search",
+  "facebook",
+  "instagram",
+  "tiktok",
+  "linkedin",
+  "indeed_or_job_board",
+  "friend_or_colleague",
+  "existing_customer_or_partner",
+  "leaflet_or_local_ad",
+  "other",
+]);
 const applicationSelect =
-  "id, created_at, updated_at, submitted_at, status, first_name, last_name, email, phone, postcode, business_name, mechanic_type, years_experience, service_radius_miles, website_url, qualifications_summary, insurance_held, services_offered, work_types, has_diagnostic_tools, has_service_van, additional_notes, review_note, reviewed_at, approved_at, approved_by, auth_user_id, invite_sent_at";
+  "id, created_at, updated_at, submitted_at, status, first_name, last_name, email, phone, postcode, business_name, mechanic_type, years_experience, service_radius_miles, website_url, qualifications_summary, insurance_held, services_offered, work_types, has_diagnostic_tools, has_service_van, additional_notes, referral_source, referral_details, review_note, reviewed_at, approved_at, approved_by, auth_user_id, invite_sent_at";
 
 const mechanicTypeLabels: Record<string, string> = {
   mobile_mechanic: "Mobile mechanic",
   garage_and_mobile: "Garage + mobile",
   garage_based: "Garage-based",
+};
+
+const referralSourceLabels: Record<string, string> = {
+  google_search: "Google search",
+  facebook: "Facebook",
+  instagram: "Instagram",
+  tiktok: "TikTok",
+  linkedin: "LinkedIn",
+  indeed_or_job_board: "Indeed or another job board",
+  friend_or_colleague: "Friend or colleague referral",
+  existing_customer_or_partner: "Existing customer or business partner",
+  leaflet_or_local_ad: "Leaflet or local advert",
+  other: "Other",
 };
 
 function displayValue(value: string | null | undefined) {
@@ -91,6 +116,8 @@ Deno.serve(async (request) => {
     const servicesOffered = stringList(body.servicesOffered);
     const workTypes = stringList(body.workTypes);
     const websiteUrl = safeWebsite(body.websiteUrl);
+    const referralSource = trimText(body.referralSource, 50);
+    const referralDetails = nullableText(body.referralDetails, 200);
 
     if (!isUuid(applicationId)) {
       return marketplaceJsonResponse(request, { error: "The application reference is invalid. Refresh and try again." }, 400);
@@ -109,6 +136,9 @@ Deno.serve(async (request) => {
     }
     if (websiteUrl === undefined) {
       return marketplaceJsonResponse(request, { error: "Enter a valid business website URL or leave it blank." }, 400);
+    }
+    if (!referralSources.has(referralSource)) {
+      return marketplaceJsonResponse(request, { error: "Tell us how you heard about STM Motors." }, 400);
     }
 
     const { data: existing, error: existingError } = await admin
@@ -170,6 +200,8 @@ Deno.serve(async (request) => {
         has_diagnostic_tools: body.hasDiagnosticTools,
         has_service_van: body.hasServiceVan,
         additional_notes: nullableText(body.additionalNotes, 3000),
+        referral_source: referralSource,
+        referral_details: referralDetails,
       })
       .select(applicationSelect)
       .single();
@@ -183,6 +215,7 @@ Deno.serve(async (request) => {
     const insuranceLabel = displayList(insuranceHeld);
     const servicesLabel = displayList(servicesOffered);
     const workTypesLabel = displayList(workTypes);
+    const referralSourceLabel = referralSourceLabels[referralSource] ?? referralSource.replaceAll("_", " ");
     let notificationSent = false;
     try {
       notificationSent = await sendMarketplaceEmail({
@@ -215,6 +248,8 @@ Deno.serve(async (request) => {
                     <p style="margin:0 0 20px;">Insurance: ${escapeHtml(insuranceLabel)}<br>Services: ${escapeHtml(servicesLabel)}<br>Work types: ${escapeHtml(workTypesLabel)}</p>
                     <h2 style="margin:0 0 8px;font-size:20px;">Additional information</h2>
                     <p style="margin:0;white-space:pre-wrap;">Qualifications: ${escapeHtml(displayValue(qualificationsSummary))}<br><br>Notes: ${escapeHtml(displayValue(additionalNotes))}</p>
+                    <h2 style="margin:20px 0 8px;font-size:20px;">Marketing source</h2>
+                    <p style="margin:0;">How they heard about us: ${escapeHtml(referralSourceLabel)}<br>Referral/source details: ${escapeHtml(displayValue(referralDetails))}</p>
                   </td></tr>
                 </table>
               </td></tr>
@@ -242,6 +277,8 @@ Deno.serve(async (request) => {
           `Service van: ${body.hasServiceVan ? "Yes" : "No"}`,
           `Qualifications: ${displayValue(qualificationsSummary)}`,
           `Additional notes: ${displayValue(additionalNotes)}`,
+          `How they heard about us: ${referralSourceLabel}`,
+          `Referral/source details: ${displayValue(referralDetails)}`,
         ].join("\n"),
       });
     } catch (notificationError) {

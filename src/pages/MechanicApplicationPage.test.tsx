@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import MechanicApplicationPage from "./MechanicApplicationPage";
 
 describe("MechanicApplicationPage", () => {
@@ -37,5 +37,33 @@ describe("MechanicApplicationPage", () => {
     expect(screen.getByPlaceholderText("First name")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Last name")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Continue" })).toBeInTheDocument();
+  });
+
+  test("captures the marketing source and optional referral details at the end", () => {
+    window.localStorage.setItem(
+      "stm-mechanic-application-draft",
+      JSON.stringify({ currentStep: 3, formState: {}, hasQualifications: null }),
+    );
+
+    render(<MechanicApplicationPage />);
+
+    const sourceSelect = screen.getByLabelText(
+      "How did you hear about STM Motors?",
+    );
+    expect(sourceSelect).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "Google search" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "Friend or colleague referral" }),
+    ).toBeInTheDocument();
+
+    fireEvent.change(sourceSelect, {
+      target: { value: "friend_or_colleague" },
+    });
+
+    expect(
+      screen.getByLabelText(/Who can we thank for the referral/i),
+    ).toBeInTheDocument();
   });
 });

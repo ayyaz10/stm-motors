@@ -12,6 +12,46 @@ export type MechanicApplicationStatus =
   | "approved"
   | "rejected";
 
+export type MechanicReferralSource =
+  | "google_search"
+  | "facebook"
+  | "instagram"
+  | "tiktok"
+  | "linkedin"
+  | "indeed_or_job_board"
+  | "friend_or_colleague"
+  | "existing_customer_or_partner"
+  | "leaflet_or_local_ad"
+  | "other";
+
+export const mechanicReferralSourceOptions: Array<{
+  label: string;
+  value: MechanicReferralSource;
+}> = [
+  { label: "Google search", value: "google_search" },
+  { label: "Facebook", value: "facebook" },
+  { label: "Instagram", value: "instagram" },
+  { label: "TikTok", value: "tiktok" },
+  { label: "LinkedIn", value: "linkedin" },
+  { label: "Indeed or another job board", value: "indeed_or_job_board" },
+  { label: "Friend or colleague referral", value: "friend_or_colleague" },
+  {
+    label: "Existing customer or business partner",
+    value: "existing_customer_or_partner",
+  },
+  { label: "Leaflet or local advert", value: "leaflet_or_local_ad" },
+  { label: "Other", value: "other" },
+];
+
+export function formatMechanicReferralSource(
+  source: MechanicReferralSource | null,
+): string {
+  return (
+    mechanicReferralSourceOptions.find((option) => option.value === source)
+      ?.label ?? "Not provided"
+  );
+}
+
 export interface MechanicApplicationInput {
   firstName: string;
   lastName: string;
@@ -30,6 +70,8 @@ export interface MechanicApplicationInput {
   hasDiagnosticTools: boolean | null;
   hasServiceVan: boolean | null;
   additionalNotes: string;
+  referralSource: MechanicReferralSource | "";
+  referralDetails: string;
 }
 
 export interface MechanicApplicationRecord {
@@ -55,6 +97,8 @@ export interface MechanicApplicationRecord {
   hasDiagnosticTools: boolean | null;
   hasServiceVan: boolean | null;
   additionalNotes: string | null;
+  referralSource: MechanicReferralSource | null;
+  referralDetails: string | null;
   reviewNote: string | null;
   reviewedAt: string | null;
   approvedAt: string | null;
@@ -86,6 +130,8 @@ interface MechanicApplicationRow {
   has_diagnostic_tools: boolean | null;
   has_service_van: boolean | null;
   additional_notes: string | null;
+  referral_source: MechanicReferralSource | null;
+  referral_details: string | null;
   review_note: string | null;
   reviewed_at: string | null;
   approved_at: string | null;
@@ -105,7 +151,7 @@ interface SubmitMechanicApplicationResponse {
 }
 
 const mechanicApplicationSelect =
-  "id, created_at, updated_at, submitted_at, status, first_name, last_name, email, phone, postcode, business_name, mechanic_type, years_experience, service_radius_miles, website_url, qualifications_summary, insurance_held, services_offered, work_types, has_diagnostic_tools, has_service_van, additional_notes, review_note, reviewed_at, approved_at, approved_by, auth_user_id, invite_sent_at";
+  "id, created_at, updated_at, submitted_at, status, first_name, last_name, email, phone, postcode, business_name, mechanic_type, years_experience, service_radius_miles, website_url, qualifications_summary, insurance_held, services_offered, work_types, has_diagnostic_tools, has_service_van, additional_notes, referral_source, referral_details, review_note, reviewed_at, approved_at, approved_by, auth_user_id, invite_sent_at";
 
 function trimOrNull(value: string): string | null {
   const trimmed = value.trim();
@@ -138,6 +184,8 @@ function mapMechanicApplicationRecord(
     hasDiagnosticTools: row.has_diagnostic_tools,
     hasServiceVan: row.has_service_van,
     additionalNotes: row.additional_notes,
+    referralSource: row.referral_source,
+    referralDetails: row.referral_details,
     reviewNote: row.review_note,
     reviewedAt: row.reviewed_at,
     approvedAt: row.approved_at,
@@ -154,6 +202,10 @@ export async function submitMechanicApplication(
 ): Promise<MechanicApplicationRecord> {
   if (!input.mechanicType) {
     throw new Error("Choose a mechanic type before applying.");
+  }
+
+  if (!input.referralSource) {
+    throw new Error("Tell us how you heard about STM Motors.");
   }
 
   const { data, error } = await supabase.functions.invoke<

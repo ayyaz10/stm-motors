@@ -19,8 +19,12 @@ import type {
   MechanicApplicationInput,
   MechanicApplicationRecord,
   MechanicApplicationType,
+  MechanicReferralSource,
 } from "../lib/mechanicApplications";
-import { submitMechanicApplication } from "../lib/mechanicApplications";
+import {
+  mechanicReferralSourceOptions,
+  submitMechanicApplication,
+} from "../lib/mechanicApplications";
 import { trackAnalyticsEvent, trackGoogleAdsConversion } from "../lib/googleTracking";
 import { usePageMetadata } from "../lib/seo";
 
@@ -194,6 +198,8 @@ const defaultFormState: MechanicApplicationInput = {
   hasDiagnosticTools: null,
   hasServiceVan: null,
   additionalNotes: "",
+  referralSource: "",
+  referralDetails: "",
 };
 
 interface MechanicApplicationDraft {
@@ -255,6 +261,13 @@ function normaliseSavedFormState(value: unknown): MechanicApplicationInput {
       typeof source.hasServiceVan === "boolean" ? source.hasServiceVan : null,
     additionalNotes:
       typeof source.additionalNotes === "string" ? source.additionalNotes : "",
+    referralSource: mechanicReferralSourceOptions.some(
+      (option) => option.value === source.referralSource,
+    )
+      ? (source.referralSource as MechanicReferralSource)
+      : "",
+    referralDetails:
+      typeof source.referralDetails === "string" ? source.referralDetails : "",
   };
 }
 
@@ -310,6 +323,7 @@ const stepFieldMap: Record<ApplicationStep, ApplicationField[]> = {
     "insuranceHeld",
     "hasDiagnosticTools",
     "hasServiceVan",
+    "referralSource",
   ],
 };
 
@@ -377,6 +391,10 @@ function getFieldError(
       return formState.hasServiceVan === null
         ? "Let us know whether you have a service van."
         : undefined;
+    case "referralSource":
+      return formState.referralSource
+        ? undefined
+        : "Tell us how you heard about STM Motors.";
     default:
       return undefined;
   }
@@ -1608,6 +1626,73 @@ function MechanicApplicationPage() {
                       placeholder="Share specialist experience, your preferred working pattern, or anything else that may help us match suitable work."
                     />
                   </label>
+
+                  <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-5">
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-semibold text-slate-900">
+                        How did you hear about STM Motors?
+                      </span>
+                      <select
+                        value={formState.referralSource}
+                        onBlur={() => handleFieldBlur("referralSource")}
+                        onChange={(event) => {
+                          markFieldTouched("referralSource");
+                          const nextSource = event.target
+                            .value as MechanicApplicationInput["referralSource"];
+                          updateField("referralSource", nextSource);
+                          if (
+                            nextSource !== "friend_or_colleague" &&
+                            nextSource !== "existing_customer_or_partner" &&
+                            nextSource !== "other"
+                          ) {
+                            updateField("referralDetails", "");
+                          }
+                        }}
+                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#1c69d4]"
+                      >
+                        <option value="">Select an option</option>
+                        {mechanicReferralSourceOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {shouldShowError("referralSource", 3) ? (
+                      <p className="mt-2 public-field-error">
+                        {getVisibleFieldError("referralSource", 3)}
+                      </p>
+                    ) : null}
+                    {formState.referralSource === "friend_or_colleague" ||
+                    formState.referralSource ===
+                      "existing_customer_or_partner" ||
+                    formState.referralSource === "other" ? (
+                      <label className="mt-4 block">
+                        <span className="mb-2 block text-sm font-semibold text-slate-900">
+                          {formState.referralSource === "other"
+                            ? "Please tell us where you found us"
+                            : "Who can we thank for the referral?"}
+                          <span className="ml-2 font-normal text-slate-500">
+                            Optional
+                          </span>
+                        </span>
+                        <input
+                          type="text"
+                          maxLength={200}
+                          value={formState.referralDetails}
+                          onChange={(event) =>
+                            updateField("referralDetails", event.target.value)
+                          }
+                          className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#1c69d4]"
+                          placeholder={
+                            formState.referralSource === "other"
+                              ? "Tell us a little more"
+                              : "Name or business (if you know it)"
+                          }
+                        />
+                      </label>
+                    ) : null}
+                  </div>
 
                   <GoogleRecaptchaField
                     siteKey={recaptchaSiteKey}
